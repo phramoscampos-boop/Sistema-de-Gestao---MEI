@@ -1,6 +1,12 @@
-body {
+.body-index, .body-login {
     background: #3b0a45;
 }
+.body-dashboard {
+    background: #fff;
+    color: black;
+}
+
+/* */
 .form-div {
     background: #d66ca9;
 }
