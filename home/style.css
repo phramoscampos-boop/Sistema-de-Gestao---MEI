@@ -1,5 +1,6 @@
 .body-index, .body-login {
     background: #3b0a45;
+    font-family: 'Courier New', Courier, monospace;
 }
 .body-dashboard {
     background: #fff;
@@ -7,6 +8,54 @@
 }
 
 /* */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* index.html */
+.html-index {
+    margin: 0;
+}
 .form-div {
+    position: fixed;
     background: #d66ca9;
+    color: white;
+    padding: 20dvh;
+    margin-top: 25dvh;
+    margin-bottom: 25dvh;
+    margin-left: 45dvh;
+    border-radius: 20px;
+}
+.btn-login {
+    margin-top: 50%;
+    margin-bottom: 20%;
 }
