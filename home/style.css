@@ -49,14 +49,43 @@
     border-color: #3b0a45;
     transform: scale(1.05);
 }
+.btn-login:active {
+    transition: 0.5s;
+    transform: scale(0.95);
+}
 
 /*login.html*/
 
+.body-login {
+    margin: 0;
+    justify-content: center;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+}
+
 .login {
-    position: fixed;
     background: #d66ca9;
     padding: 100px;
     border-radius: 20px;
     text-align: center;
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+}
+
+.credencial {
+    margin-bottom: 10px;
+    padding: 5px;
+    border-radius: 5px;
+}
+
+.form-label-login {
+    display: flex;
+    margin-bottom: 10px;
+    font-weight: bold;
+    padding: 5px;
+    flex-direction: column;
+    text-decoration: none;
 }
 
