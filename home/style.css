@@ -1,61 +1,62 @@
+@import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap');
+
 .body-index, .body-login {
     background: #3b0a45;
-    font-family: 'Courier New', Courier, monospace;
-}
-.body-dashboard {
-    background: #fff;
-    color: black;
+    font-family: 'Comfortaa';
+    color: white;
 }
 
-/* */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+.body-index {
+    min-height: 100vh;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 
 /* index.html */
 .html-index {
     margin: 0;
 }
-.form-div {
+.container {
     position: fixed;
     background: #d66ca9;
     color: white;
-    padding: 20dvh;
-    margin-top: 25dvh;
-    margin-bottom: 25dvh;
-    margin-left: 45dvh;
+    padding: 100px;
     border-radius: 20px;
+    text-align: center;
+}
+.pre-login {
+    display: flex;
+    justify-content: center;
 }
 .btn-login {
-    margin-top: 50%;
-    margin-bottom: 20%;
+    display: inline-block;
+    padding: 12px 30px;
+    background: #3b0a45;
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+    border: 2px solid #3b0a45;
+    border-radius: 10px;
+
+    transition: 0.3s;
 }
+.btn-login:hover {
+    background: #d66ca9;
+    color: #3b0a45;
+    border-color: #3b0a45;
+    transform: scale(1.05);
+}
+
+/*login.html*/
+
+.login {
+    position: fixed;
+    background: #d66ca9;
+    padding: 100px;
+    border-radius: 20px;
+    text-align: center;
+}
+
