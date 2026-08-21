@@ -2,7 +2,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap');
 
 .body-index, .body-login {
-    background: #3b0a45;
+    background: #fde0ed;
     font-family: 'Comfortaa';
     color: white;
 }
@@ -19,6 +19,13 @@
 .html-index {
     margin: 0;
 }
+.container-geral {
+    display: flex;
+    flex-direction: row;
+    gap: 40px;
+    align-items: center;
+    justify-content: center;
+}
 .container {
     position: fixed;
     background: #d66ca9;
@@ -26,6 +33,8 @@
     padding: 100px;
     border-radius: 20px;
     text-align: center;
+    box-shadow: 9px 8px 4px -2px rgba(0, 0, 0, 0.5);
+    -webkit-box-shadow: 9px 8px 4px -2px rgba(0, 0, 0, 0.5);
 }
 .pre-login {
     display: flex;
@@ -72,6 +81,8 @@
     display: flex;
     justify-content: center;
     flex-direction: column;
+    box-shadow: 9px 8px 4px -2px rgba(0, 0, 0, 0.5);
+    -webkit-box-shadow: 9px 8px 4px -2px rgba(0, 0, 0, 0.5);
 }
 
 .credencial {
@@ -88,4 +99,3 @@
     flex-direction: column;
     text-decoration: none;
 }
-
