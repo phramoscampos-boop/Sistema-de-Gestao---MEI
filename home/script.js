@@ -17,3 +17,14 @@ function controlarModal() {
 }
 controlarModal();
 
+function validarFormulario() {
+    const emailInput = document.getElementById('email-login');
+    const passwordInput = document.getElementById('password-login');
+
+    if (emailInput.value === '' || passwordInput.value === '') {
+        alert('Por favor, preencha todos os campos.');
+        return false;
+    }
+
+    return true;
+}
