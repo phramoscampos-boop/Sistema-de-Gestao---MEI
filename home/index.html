@@ -10,17 +10,31 @@
   </head>
   <body class="body-index"> <!---->
 
-    <div class="container-geral">
-      <div class="container-svg">
-        <div class="container">
-          <h1>Bem-vindo ao Sistema de Gestão - MEI</h1>
-          <p>Gerencie seu fluxo de clientes e atividades de forma eficiente.</p>
-          <div class="pre-login">
-            <a href="login.html" class="btn-login">Acessar Sistema</a>
-          </div>
+    <div class="container">
+      <h1>Bem-vindo ao Sistema de Gestão - MEI</h1>
+      <p>Gerencie seu fluxo de clientes e atividades de forma eficiente.</p>
+      <button id="abrirModal" class="btn-login">Acessar Sistema</button>
+      
+    </div>
+    <div class="pre-login">
+       
+      <div id="modal" class="modal">
+        <div class="modal-conteudo">
+          <span id="fecharModal">&times;</span>
+
+          <h2>Insira as suas credenciais</h2>
+          <p>Por favor, insira seu email e sua senha.</p>
+          <form action="" class="form-login">
+            <label for="email" class="form-label-login">
+              e-mail: <input type="email" name="email" id="email-login" placeholder="seuemail@empresa.com" class="credencial">
+              senha: <input type="password" name="password" id="password-login" placeholder="1234567" class="credencial">
+            </label>
+            <button type="button" class="btn-login">Salvar</button>
+          </form>
         </div>
       </div>
     </div>
+
 
     <script src="script.js"></script>
   </body>
