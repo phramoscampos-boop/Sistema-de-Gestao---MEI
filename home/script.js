@@ -28,3 +28,19 @@ function validarFormulario() {
 
     return true;
 }
+
+function login() {
+    if (validarFormulario()) {
+        const email = document.getElementById('email-login').value;
+        const password = document.getElementById('password-login').value;
+        const emailCorreto = "elislabelle@email.com";
+        const senhaCorreta = "123456";
+
+        if (email === emailCorreto && password === senhaCorreta) {
+            alert('Login bem-sucedido!');
+            window.location.href = 'dashboard.html';
+        } else {
+            alert('Email ou senha incorretos. Tente novamente.');
+        }
+    }
+}
