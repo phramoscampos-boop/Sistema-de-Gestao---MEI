@@ -46,11 +46,11 @@ html, body{
 }
 
 .bt_cadastrar_clientes {
-    top: 80px;
+    top: 50px;
 }
 
 .bt_cadastrar_servicos {
-    top: 180px;
+    top: 150px;
 }
 
 .bt_cadastrar_clientes:active, .bt_cadastrar_servicos:active{
@@ -63,7 +63,7 @@ html, body{
 
 .p_clientes, .p_servicos{
     position: fixed;
-    left: 630px;
+    left: 623px;
     width: 800px;
     height: 50px;
     font-size: 30px;
@@ -71,11 +71,11 @@ html, body{
 }
 
 .p_clientes{
-    top: 60px;
+    top: 30px;
 }
 
 .p_servicos{
-    top: 160px;
+    top: 130px;
 }
 
 .dashboard_busca{
@@ -83,11 +83,11 @@ html, body{
     position: fixed;
     left: 550px;
     width: 1150px;
-    height: 510px;
+    height: 560px;
     font-size: 30px;
     border-radius: 5%;
     border: 0px;
-    top: 300px;
+    top: 260px;
 }
 
 .profile_img{
@@ -96,7 +96,7 @@ html, body{
     top: 50px;
     width: 55px;
     height: 55px;
-}
+} 
 
 .profile {
     transition: transform 0.15s ease;
@@ -117,11 +117,11 @@ html, body{
     box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.2);
 }*/
 
-.profile_arrow{
+/*.profile_arrow{
     font-family: Arial, Helvetica;
     position: absolute;
     right: 80px;
     top: 38px;
     width: 55px;
     height: 55px;
-}
+}*/
