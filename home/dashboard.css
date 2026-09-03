@@ -144,12 +144,18 @@ html, body{
 
 .profile_arrow{             /* Troquei o h1 por um span */
     font-family: Arial, Helvetica;
-    font-size: 50px;
+    size: 100%;
     position: absolute;
     right: 85px;
     top: 50px;
     width: 55px;
     height: 55px;
     user-select: none; /* Impede a seleção de texto */
+}
+
+.profile_info {
+    display: none;
+    background: #d66ca9;
+    min-height: 100dvh;
 }
 
