@@ -22,16 +22,42 @@
         </div>
 
         <div class="home_cadastrar">
-          <button class="bt_cadastrar_clientes">+</button>
-          <p class="p_clientes">Cadastrar clientes</p>
-          <button class="bt_cadastrar_servicos">+</button>
-          <p class="p_servicos">Cadastrar serviços</p>
+          <button class="cadastrar_clientes">
+              <span class="bt_cadastrar_clientes">+</span>
+              <span class="bt_clientes">Cadastrar clientes</span>
+          </button>
+
+          <button class="cadastrar_servicos">
+              <span class="bt_cadastrar_servicos">+</span>
+              <span class="bt_servicos">Cadastrar serviços</span>
+          </button>
         </div>
       </div>
 
-      <div class="profile">
+      <div class="profile" id="bt_profile">
         <img class="profile_img" src="profile_img.svg">
         <span class="profile_arrow">v</span> <!-- Troquei o h1 por um span -->
+      
+        <!--Tela de perfil-->
+        <div class=""></div>
+      </div>
+
+      <div class="cadastro_cliente" id="cadastro_cliente">
+        <div class="cadastro-content">
+          <span class="closeCadCli" id="closeCadCli">&times;</span>
+
+          <h2>Cadastro > Clientes</h2>
+          <form action="" class="form-cadastro-cliente">
+            <label for="nome" >Nome: </label>
+            <input required type="nome" name="nome" id="nome-cad-cliente" class="style_cad-cliente">
+            <label for="telefone" >Telefone: </label>
+            <input required type="telefone" name="telefone" id="telefone-cad-cliente" placeholder="(xx) 9xxxx-xxxx" class="style_cad-cliente">
+            <label for="nasc" >Data de nascimento: </label>
+            <input required type="nasc" name="nasc" id="nasc-cad-cliente" placeholder="dd/mm" class="style_cad-cliente">
+
+          </form>
+        </div>
+
       </div>
 
       <div class="dashboard_busca">
@@ -39,5 +65,6 @@
 
     </main>
     <script src="script.js"></script>
+    <script src="dashboard_script"></script>
   </body>
 </html>

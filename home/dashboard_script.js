@@ -1,0 +1,1 @@
+const bt_profile = document.getElementById('bt_profile');

@@ -34,50 +34,73 @@ html, body{
     top: 400px;
 }
 
-.bt_cadastrar_clientes, .bt_cadastrar_servicos{
-    background-color: #fde0ed;
+.cadastrar_clientes, .cadastrar_servicos {
     position: fixed;
     left: 550px;
+    width: 873px;
+    height: 50px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+    user-select: none;
+}
+
+.cadastrar_clientes{
+    top: 50px;
+}
+
+.cadastrar_servicos {
+    top: 150px;
+}
+
+/* BOTÃO DO + */
+.bt_cadastrar_clientes, .bt_cadastrar_servicos{
+    background-color: #fde0ed;
+    position: absolute;
+    left: 0px;
+    top: 0px;
     width: 50px;
     height: 50px;
     font-size: 30px;
     border-radius: 20%;
-    border: 0px;
-    transition: transform 0.15s ease;
-    user-select: none; /* Impede a seleção de texto */
+    /*border: 0px;*/
+    user-select: none; /*Impede a seleção de texto*/
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
 }
 
-.bt_cadastrar_clientes {
-    top: 50px;
+/* CLIQUE */
+.cadastrar_clientes,
+.cadastrar_servicos {
+    transform-origin: left center;
+}
+.cadastrar_clientes:active,
+.cadastrar_servicos:active{
+    transform: scale(0.95);
 }
 
-.bt_cadastrar_servicos {
-    top: 150px;
-}
-
-.bt_cadastrar_clientes:active, .bt_cadastrar_servicos:active{
-    transform: scale(0.85);
-}
-
-.bt_cadastrar_clientes:hover, .bt_cadastrar_servicos:hover{
+/* HOVER */
+.cadastrar_clientes:hover .bt_cadastrar_clientes,
+.cadastrar_servicos:hover .bt_cadastrar_servicos {
     background-color: #fdb0d2;
 }
 
-.p_clientes, .p_servicos{
-    position: fixed;
-    left: 623px;
+/* TEXTO */
+.bt_clientes, 
+.bt_servicos{
+    position: absolute;
+    left: 73px;
+    top: 0px;
     width: 800px;
     height: 50px;
     font-size: 30px;
     font-family: "Comfortaa";
-}
-
-.p_clientes{
-    top: 30px;
-}
-
-.p_servicos{
-    top: 130px;
+    display: flex;
+    align-items: center;
+    pointer-events: none;
 }
 
 .dashboard_busca{
@@ -114,35 +137,19 @@ html, body{
 }
 
 .profile:active {
-    transform: scale(0.95); /* Tava dando erro, ele tava sumindo porque a position da setinha e da imagem de perfil estão absolute e a do profile não tava definida, então quando ele dava aumentava o tamanho, ele sumia. */
+    transform: scale(0.95); 
+    /* Tava dando erro, ele tava sumindo porque a position da setinha e da imagem de perfil 
+    estão absolute e a do profile não tava definida, então quando ele dava aumentava o tamanho, ele sumia. */
 }
 
 .profile_arrow{             /* Troquei o h1 por um span */
     font-family: Arial, Helvetica;
-    font-size: 30px;
+    font-size: 50px;
     position: absolute;
-    right: 80px;
-    top: 38px;
+    right: 85px;
+    top: 50px;
     width: 55px;
     height: 55px;
     user-select: none; /* Impede a seleção de texto */
 }
 
-/*.profile {
-    transition: transform 0.15s ease; não tem position definida ó
-}
-
-.profile:active {
-    transform: scale(0.95); 
-}*/
-
-/*.profile{
-    transition: transform 0.15s ease;
-}
-
-.profile:active{
-    transform: scale(0.85);
-    transform: scale(0.9) translateY(2px);
-    opacity: 0.8;
-    box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.2);
-}*/
