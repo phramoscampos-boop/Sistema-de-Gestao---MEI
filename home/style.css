@@ -50,6 +50,12 @@
     border-radius: 10px;
     width: 40dvh;
     position: relative;
+    text-align: center;
+}
+.modal-conteudo p {
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 15px;
 }
 
 #fecharModal {
@@ -60,8 +66,72 @@
     font-size: 20px;
     cursor: pointer;
 }
-.btn-login {
+.btn-modal {
     display: inline-block;
+    padding: 12px 30px;
+    background: #3b0a45;
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+    border: 2px solid #3b0a45;
+    border-radius: 10px;
+
+    transition: 0.3s;
+}
+.btn-modal:hover {
+    background: #d66ca9;
+    color: #3b0a45;
+    border-color: #3b0a45;
+    transform: scale(1.05);
+}
+.btn-modal:active {
+    transition: 0.5s;
+    transform: scale(0.95);
+}
+
+/*login.html*/
+
+.login {
+    background: #d66ca9;
+    padding: 100px;
+    border-radius: 20px;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    box-shadow: 9px 8px 4px -2px rgba(0, 0, 0, 0.5);
+    -webkit-box-shadow: 9px 8px 4px -2px rgba(0, 0, 0, 0.5);
+}
+
+.credencial {
+    margin-bottom: 10px;
+    padding: 5px;
+    border-radius: 5px;
+    user-select: none; /* Impede a seleção de texto */
+}
+/* Estilização do formulário de login */
+.form-login {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.form-label-login {
+    display: flex;
+    margin-bottom: 10px;
+    font-weight: bold;
+    padding: 5px;
+    text-align: left;
+    flex-direction: column;
+    text-decoration: none;
+    width: 90%;
+    height: 100%;
+}
+.form-label-login label {
+    margin-bottom: 20px;
+}
+.btn-login {
+    display: flex;
+    justify-content: center;
     padding: 12px 30px;
     background: #3b0a45;
     color: white;
@@ -82,44 +152,5 @@
     transition: 0.5s;
     transform: scale(0.95);
 }
-
-/*login.html*/
-
-.body-login {
-    margin: 0;
-    justify-content: center;
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-}
-
-.login {
-    background: #d66ca9;
-    padding: 100px;
-    border-radius: 20px;
-    text-align: center;
-    display: flex;
-    justify-content: center;
-    flex-direction: column;
-    box-shadow: 9px 8px 4px -2px rgba(0, 0, 0, 0.5);
-    -webkit-box-shadow: 9px 8px 4px -2px rgba(0, 0, 0, 0.5);
-}
-
-.credencial {
-    margin-bottom: 10px;
-    padding: 5px;
-    border-radius: 5px;
-}
-
-.form-label-login {
-    display: flex;
-    margin-bottom: 10px;
-    font-weight: bold;
-    padding: 5px;
-    flex-direction: column;
-    text-decoration: none;
-}
-.form-label-login label {
-    margin-bottom: 20px;
-}
+/* Estilização do botão de login */
 
