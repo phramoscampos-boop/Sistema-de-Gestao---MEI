@@ -5,7 +5,7 @@ html, body{
     height: 100%;
     overflow: hidden;
 }
-
+/*BARRA LATERAL*/
 .side_bar{
     background-color: #d66ca9;
     box-sizing: border-box;
@@ -32,6 +32,31 @@ html, body{
     font-size: 550%;
     left: 70px;
     top: 400px;
+}
+
+/*BOTÕES DE CADASTRO*/
+.cadastro_cliente {
+    display: none; /* começa escondido */
+    position: fixed;
+    top: 0;
+    left: 0;
+
+    width: 100%;
+    height: 100%;
+
+    justify-content: center;
+    align-items: center;
+
+    z-index: 999;
+}
+
+.cadastro-content {
+    background-color: white;
+    width: 500px;
+    padding: 30px;
+    border-radius: 15px;
+
+    position: relative;
 }
 
 .cadastrar_clientes, .cadastrar_servicos {
@@ -103,6 +128,7 @@ html, body{
     pointer-events: none;
 }
 
+/*DASHBOARD DE BUSCA*/
 .dashboard_busca{
     background-color: #fde0ed;
     position: fixed;
@@ -115,6 +141,8 @@ html, body{
     top: 260px;
 }
 
+
+/*BOTÃO DO PERFIL*/
 .profile_img{
     position: absolute;
     right: 50px;
@@ -142,15 +170,22 @@ html, body{
     estão absolute e a do profile não tava definida, então quando ele dava aumentava o tamanho, ele sumia. */
 }
 
+.profile:hover {
+    filter: brightness(0) saturate(100%) invert(50%) sepia(20%);
+}
+
 .profile_arrow{             /* Troquei o h1 por um span */
-    font-family: Arial, Helvetica;
-    size: 100%;
     position: absolute;
-    right: 85px;
-    top: 50px;
-    width: 55px;
-    height: 55px;
+    right: 95px;
+    top: 70px;
+    width: 45%;
+    height: 45%;
     user-select: none; /* Impede a seleção de texto */
+}
+
+.profile_arrow img{
+    width: 45%;
+    height: 45%;
 }
 
 .profile_info {
@@ -158,4 +193,5 @@ html, body{
     background: #d66ca9;
     min-height: 100dvh;
 }
+
 
