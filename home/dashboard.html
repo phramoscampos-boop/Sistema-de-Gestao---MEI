@@ -32,53 +32,84 @@
           </button>
         </div>
 
-        <div class="profile" id="bt_profile">
-          <img class="profile_img" src="profile_img.svg">
+      <div class="profile_container"> 
+        
+        <div class="profile" id="profile">
+          <img class="profile_img" id="open_profile" src="profile_img.svg">
           <span class="profile_arrow">
-            <img src="arrow_profile.svg" alt="Seta de mais informações sobre perfil.">
+            <img class = "profile_arrow_img" src="arrow_profile.svg" alt="Seta de mais informações sobre perfil.">
             <!--Troquei a setinha v pra uma imagem de setinha, depois vc aumenta o tamanho no css-->
           </span> <!-- Troquei o h1 por um span -->
-        
-          <!--Tela de perfil-->
-          <section id="profile_info_id" class="profile_info">
-            <h1>Meu Perfil</h1>
-
-            <div class="profile_data">
-              <label>Nome</label>
-              <p></p>
-            </div>
-
-            <div class="profile_data">
-              <label>E-mail</label>
-              <p></p>
-            </div>
-
-            <div class="profile_data">
-              <label>Telefone</label>
-              <p></p>
-            </div>
-          </section>
         </div>
-
         
+                  <!--Tela de perfil-->
+        <div id="modalProfile" class="profile_info">
+          <h1>Meu Perfil</h1>
+
+          <div class="profile_data">
+            <label>Nome</label>
+            <p>Elis</p>
+          </div>
+
+          <div class="profile_data">
+            <label>E-mail</label>
+            <p>elislabelle@email.com</p>
+          </div>
+
+          <div class="profile_data">
+            <label>Telefone</label>
+            <p>+55 (77)0000-0000</p>
+          </div>
+        
+        </div>
+        
+      </div> 
 
         <div class="dashboard_busca">
         </div>
+
       </div>
-      <div class="cadastro_cliente" id="cadastro_cliente">
+        <div class="cadastro_cliente" id="cadastro_cliente">
           <div class="cadastro-content">
             <span class="closeCadCli" id="closeCadCli">&times;</span>
 
             <h2>Cadastro > Clientes</h2>
             <form action="" class="form-cadastro-cliente">
               <label for="nome" >Nome: </label>
-              <input required type="nome" name="nome" id="nome-cad-cliente" class="style_cad-cliente">
-              <label for="telefone" >Telefone: </label>
-              <input required type="telefone" name="telefone" id="telefone-cad-cliente" placeholder="(xx) 9xxxx-xxxx" class="style_cad-cliente">
-              <label for="nasc" >Data de nascimento: </label>
-              <input required type="nasc" name="nasc" id="nasc-cad-cliente" placeholder="dd/mm/aaaa" class="style_cad-cliente">
-              <label for="cep" >CEP: </label>
-              <input required type="cep" name="cep" id="cep-cad-cliente" placeholder="xxxxxxxx (apenas números)" class="style_cad-cliente">
+              <input 
+                required type="nome" 
+                name="nome" 
+                id="nome-cad-cliente" 
+                class="style_cad-cliente">
+              
+              <br><label for="telefone" >Telefone: </label>
+              <input 
+                required type="telefone" 
+                name="telefone" 
+                id="telefone-cad-cliente" 
+                placeholder="(xx) 9xxxx-xxxx"
+                maxlength="15"
+                class="style_cad-cliente">
+              
+              <br><label for="nasc" >Data de nascimento: </label>
+              <input 
+                type="nasc" 
+                name="nasc" 
+                id="nasc-cad-cliente" 
+                placeholder="dd/mm/aaaa"
+                maxlength="10"
+                class="style_cad-cliente">
+              
+              <br><label for="cep" >CEP: </label>
+              <input 
+                type="cep" 
+                name="cep" 
+                id="cep-cad-cliente" 
+                placeholder="xxxxx-xxx"
+                maxlength="9"
+                class="style_cad-cliente">
+
+              <button class="bt_cadastrar" id="bt_cadastrar">Cadastrar</button>
             </form>
           </div>
 
