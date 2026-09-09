@@ -1,0 +1,8 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="titulo descricao">
+  <title id="titulo">Monograma P da MEI Gestão</title>
+  <desc id="descricao">Letra P desenhada com um traço contínuo e orgânico.</desc>
+  <g stroke="#7D2455" stroke-width="32" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M82 325C107 361 146 365 184 336C215 313 237 296 270 315" />
+    <path d="M270 389V137C270 119 285 105 303 105H351C404 105 433 138 433 190C433 252 390 289 270 305" />
+  </g>
+</svg>

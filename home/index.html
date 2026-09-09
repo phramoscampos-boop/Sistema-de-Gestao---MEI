@@ -1,42 +1,39 @@
 <!doctype html>
-<html class= "html-index" lang="pt-br">
+<html lang="pt-br">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <link rel="stylesheet" href="style.css" />
-
     <title>Sistema de Gestão - MEI</title>
   </head>
-  <body class="body-index"> <!--Página Inicial-->
+  <body class="body-index">
+    <main class="pagina-login">
+      <section class="apresentacao">
+        <img class="logo-mei" src="logo-mei-v2.svg" alt="Logo da MEI Gestão">
+        <h1>Sistema de Gestão - MEI</h1>
+        <p>Gerencie seu fluxo de clientes e atividades de forma eficiente.</p>
+      </section>
 
-    <div class="container"> <!-- Container principal -->
-      <h1>Bem-vindo ao Sistema de Gestão - MEI</h1>
-      <p>Gerencie seu fluxo de clientes e atividades de forma eficiente.</p>
-      <button id="abrirModal" class="btn-modal">Acessar Sistema</button>
-      
-    </div>
-    <div class="pre-login"> <!-- Pre-login -->
-       
-      <div id="modal" class="modal">
-        <div class="modal-conteudo">
-          <span class="fecharModal" id="fecharModal">&times;</span>
-
+      <section class="area-login">
+        <form class="login" id="form-login">
           <h2>Login</h2>
           <p>Por favor, insira seu email e sua senha.</p>
-          <form action="" class="form-login">
-            <label for="email-login" class="form-label-login">
-              e-mail: <input required type="email" name="email" id="email-login" placeholder="seuemail@empresa.com" class="credencial">
-              senha: <input required type="password" name="password" id="password-login" placeholder="1234567" class="credencial">
-            </label>
-           
-            <button type="button" class="btn-login" onclick="login();">Salvar</button>
-          </form>
-        </div>
-      </div>
-    </div>
 
-    <script src="https://unpkg.com/scrollreveal"></script>
+          <label for="email-login" class="form-label-login">
+            e-mail:
+            <input required type="email" name="email" id="email-login" placeholder="seuemail@empresa.com" class="credencial">
+          </label>
+
+          <label for="password-login" class="form-label-login">
+            senha:
+            <input required type="password" name="password" id="password-login" placeholder="1234567" class="credencial">
+          </label>
+
+          <button type="submit" class="btn-login">Salvar</button>
+        </form>
+      </section>
+    </main>
     <script src="script.js"></script>
   </body>
 </html>
