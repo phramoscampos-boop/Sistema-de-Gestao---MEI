@@ -57,6 +57,14 @@
     line-height: 1.6;
 }
 
+.ilustracao-calendario {
+    width: min(100%, 390px);
+    max-height: 300px;
+    margin-top: 28px;
+    object-fit: contain;
+    position: relative;
+}
+
 .area-login {
     padding: 30px;
 }
@@ -138,6 +146,12 @@
     .apresentacao {
         min-height: 35vh;
         padding: 40px 28px;
+    }
+
+    .ilustracao-calendario {
+        width: min(100%, 280px);
+        max-height: 210px;
+        margin-top: 22px;
     }
 
     .area-login {
