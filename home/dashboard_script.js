@@ -171,3 +171,18 @@ cep.addEventListener('input', function() {
 });
 
 // controlar botão
+
+
+// voltar para home
+
+function voltarHome() {
+    const voltarHomeBtn = document.getElementById('voltarHome');
+    voltarHomeBtn.addEventListener("click", function(){
+        // Redireciona para a página inicial, que está na mesma pasta do dashboard.
+        window.location.href = 'index.html';
+    });
+}
+
+// Ativa o evento de clique assim que o script é carregado.
+voltarHome();
+

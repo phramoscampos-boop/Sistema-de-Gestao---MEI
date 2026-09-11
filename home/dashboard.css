@@ -30,6 +30,46 @@ html, body{
     user-select: none; /* Impede a seleção de texto */
 }
 
+.voltarHome-class{
+    position: fixed;
+    top: 50px;
+    left: 20px;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    user-select: none; /* Impede a seleção de texto */
+    
+    transition: transform 0.3s ease; 
+}
+
+.voltarHome-class:hover{
+    transform: scale(1.1);
+    rotate: 90deg;
+}
+
+.voltarHome-text{
+    position: fixed;
+    top: 42px;
+    left: 70px;
+    color: white;
+    font-size: 18px;
+    user-select: none; /* Impede a seleção de texto */
+
+    /* Mantém o texto oculto e levemente à esquerda antes do hover. */
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(-10px);
+    transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease;
+}
+
+/* Faz o texto aparecer suavemente ao passar o mouse sobre a seta de voltar. */
+.voltarHome-class:hover + .voltarHome-text,
+.voltarHome-text.mostrar{
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(0);
+}
+
 .elis{
     font-size: 700%;
     left: 120px;
