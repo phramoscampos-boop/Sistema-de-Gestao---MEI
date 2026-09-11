@@ -7,31 +7,32 @@
     <link rel="stylesheet" href="style.css" />
     <title>Sistema de Gestão - MEI</title>
   </head>
-  <body class="body-index">
+  <body class="tela-login">
     <main class="pagina-login">
-      <section class="apresentacao">
-        <img class="logo-mei" src="logo-mei-v2.svg" alt="Logo da MEI Gestão">
+      <section class="boas-vindas">
+        <img class="logo" src="logo-mei-v2.svg" alt="Logo da MEI Gestão">
         <h1>Sistema de Gestão - MEI</h1>
         <p>Gerencie seu fluxo de clientes e atividades de forma eficiente.</p>
-        <img class="ilustracao-calendario" src="calendario.svg" alt="Ilustração de calendário e organização de tarefas">
+        <img class="ilustracao" src="calendario.svg" alt="Ilustração de calendário e organização de tarefas">
       </section>
 
-      <section class="area-login">
-        <form class="login" id="form-login">
+      <section class="acesso">
+        <form class="login" id="form-login" novalidate>
           <h2>Login</h2>
           <p>Por favor, insira seu email e sua senha.</p>
 
-          <label for="email-login" class="form-label-login">
+          <label for="email-login" class="campo-login">
             e-mail:
-            <input required type="email" name="email" id="email-login" placeholder="seuemail@empresa.com" class="credencial">
+            <input type="email" name="email" id="email-login" placeholder="seuemail@empresa.com" class="credencial">
           </label>
 
-          <label for="password-login" class="form-label-login">
+          <label for="password-login" class="campo-login">
             senha:
-            <input required type="password" name="password" id="password-login" placeholder="1234567" class="credencial">
+            <input type="password" name="password" id="password-login" placeholder="1234567" class="credencial">
           </label>
+          <p id="mensagem-erro" class="mensagem-erro"></p>
 
-          <button type="submit" class="btn-login">Salvar</button>
+          <button type="submit" class="botao-login">Salvar</button>
         </form>
       </section>
     </main>

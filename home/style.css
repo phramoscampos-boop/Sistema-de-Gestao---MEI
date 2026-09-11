@@ -9,7 +9,7 @@
     box-sizing: border-box;
 }
 
-.body-index {
+.tela-login {
     min-height: 100vh;
     margin: 0;
     color: white;
@@ -22,22 +22,22 @@
     display: flex;
 }
 
-.apresentacao,
-.area-login {
+.boas-vindas,
+.acesso {
     width: 50%;
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-.apresentacao {
+.boas-vindas {
     padding: 60px;
     flex-direction: column;
     text-align: center;
     background: var(--background_janelas);
 }
 
-.logo-mei {
+.logo {
     width: 110px;
     height: 110px;
     margin-bottom: 18px;
@@ -46,18 +46,18 @@
     background: #fde0ed;
 }
 
-.apresentacao h1 {
+.boas-vindas h1 {
     margin: 0 0 20px;
     font-size: 2.2rem;
 }
 
-.apresentacao p {
+.boas-vindas p {
     margin: 0;
     max-width: 390px;
     line-height: 1.6;
 }
 
-.ilustracao-calendario {
+.ilustracao {
     width: min(100%, 390px);
     max-height: 300px;
     margin-top: 28px;
@@ -65,7 +65,7 @@
     position: relative;
 }
 
-.area-login {
+.acesso {
     padding: 30px;
 }
 
@@ -90,7 +90,7 @@
     font-size: 15px;
 }
 
-.form-label-login {
+.campo-login {
     margin-bottom: 15px;
     display: flex;
     flex-direction: column;
@@ -107,7 +107,7 @@
     font-family: 'Comfortaa', sans-serif;
 }
 
-.btn-login {
+.botao-login {
     margin-top: 8px;
     padding: 12px 30px;
     align-self: center;
@@ -121,7 +121,7 @@
     transition: 0.3s;
 }
 
-.btn-login:hover {
+.botao-login:hover {
     border-color: #3b0a45;
     border-radius: 20px;
     color: #3b0a45;
@@ -129,8 +129,22 @@
     transform: scale(1.05);
 }
 
-.btn-login:active {
+.botao-login:active {
     transform: scale(0.95);
+}
+
+.mensagem-erro {
+    display: none;
+    margin: 0 0 10px;
+    padding: 8px;
+    border-radius: 5px;
+    color: white;
+    background: #3b0a45;
+    font-size: 14px;
+}
+
+.mensagem-erro.mostrar {
+    display: block;
 }
 
 @media (max-width: 700px) {
@@ -138,23 +152,23 @@
         flex-direction: column;
     }
 
-    .apresentacao,
-    .area-login {
+    .boas-vindas,
+    .acesso {
         width: 100%;
     }
 
-    .apresentacao {
+    .boas-vindas {
         min-height: 35vh;
         padding: 40px 28px;
     }
 
-    .ilustracao-calendario {
+    .ilustracao {
         width: min(100%, 280px);
         max-height: 210px;
         margin-top: 22px;
     }
 
-    .area-login {
+    .acesso {
         padding: 35px 24px;
     }
 
