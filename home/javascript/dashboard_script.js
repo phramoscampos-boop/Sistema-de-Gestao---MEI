@@ -179,7 +179,7 @@ function voltarHome() {
     const voltarHomeBtn = document.getElementById('voltarHome');
     voltarHomeBtn.addEventListener("click", function(){
         // Redireciona para a página inicial, que está na mesma pasta do dashboard.
-        window.location.href = 'index.html';
+        window.location.href = 'login.html';
     });
 }
 

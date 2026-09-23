@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-br">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta http-equiv="X-UA-Compatible" content="ie=edge" />
+		<title>Cadastro - Sistema de Gestão MEI</title>
+		<link rel="stylesheet" href="../css/cadastro.css" />
+	</head>
+	<body class="tela-cadastro">
+		<main class="pagina-cadastro">
+			<section class="boas-vindas">
+				<img class="logo" src="../assets/images/logo-mei-v2.svg" alt="Logo da MEI Gestão">
+				<h1>Comece a organizar seu negócio</h1>
+				<p>Crie sua conta e tenha mais praticidade para gerenciar seu fluxo de clientes e atividades.</p>
+				<img class="ilustracao" src="../assets/images/calendario.svg" alt="Ilustração de calendário e organização de tarefas">
+			</section>
+
+			<section class="acesso">
+				<form class="cadastro" id="form-cadastro" novalidate>
+					<h2>Cadastro</h2>
+					<p>Preencha os dados abaixo para criar sua conta.</p>
+
+					<label for="nome-cadastro" class="campo-cadastro">
+						nome completo:
+						<input type="text" name="nome" id="nome-cadastro" placeholder="Seu nome completo" class="credencial" autocomplete="name">
+					</label>
+
+					<label for="email-cadastro" class="campo-cadastro">
+						e-mail:
+						<input type="email" name="email" id="email-cadastro" placeholder="seuemail@empresa.com" class="credencial" autocomplete="email">
+					</label>
+
+					<label for="senha-cadastro" class="campo-cadastro">
+						senha:
+						<input type="password" name="senha" id="senha-cadastro" placeholder="Mínimo de 6 caracteres" class="credencial" autocomplete="new-password">
+					</label>
+
+					<label for="confirmacao-senha" class="campo-cadastro">
+						confirme sua senha:
+						<input type="password" name="confirmacao-senha" id="confirmacao-senha" placeholder="Repita sua senha" class="credencial" autocomplete="new-password">
+					</label>
+
+					<p id="mensagem-erro" class="mensagem-erro" role="alert"></p>
+					<p id="mensagem-sucesso" class="mensagem-sucesso" role="status"></p>
+
+					<button type="submit" class="botao-cadastro">Criar conta</button>
+					<p class="link-acesso">Já possui uma conta? <a href="login.html">Entrar</a></p>
+				</form>
+			</section>
+		</main>
+		<script src="../javascript/cadastro.js"></script>
+	</body>
+</html>
