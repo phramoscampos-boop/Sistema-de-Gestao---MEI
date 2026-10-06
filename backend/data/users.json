@@ -1,12 +1,14 @@
 [
-    {
-        "user": "pedro",
-        "password": "pedro123",
-        "profile": "admin"
-    },
-    {
-        "user": "leticia",
-        "password": "leticia123",
-        "profile": "admin"
-    }
+  {
+    "id": 1,
+    "nome": "Pedro",
+    "email": "pedro@empresa.com",
+    "senha": "pedro123"
+  },
+  {
+    "id": 2,
+    "nome": "Letícia",
+    "email": "leticia@empresa.com",
+    "senha": "leticia123"
+  }
 ]

@@ -1,3 +1,31 @@
+// Verifica se existe usuário logado antes de liberar o dashboard.
+const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+
+if (!usuarioLogado) {
+    window.location.href = 'login.html';
+}
+
+const nomeUsuarioDashboard = document.getElementById('nome-usuario-dashboard');
+const emailUsuarioDashboard = document.getElementById('email-usuario-dashboard');
+
+if (nomeUsuarioDashboard && usuarioLogado) {
+    nomeUsuarioDashboard.textContent = usuarioLogado.nome || 'Usuário';
+}
+
+if (emailUsuarioDashboard && usuarioLogado) {
+    emailUsuarioDashboard.textContent = usuarioLogado.email || 'E-mail não informado';
+}
+
+// Logout do sistema: remove a sessão atual e leva de volta para a tela de login.
+const botaoSair = document.getElementById('botao-sair');
+
+if (botaoSair) {
+    botaoSair.addEventListener('click', function() {
+        localStorage.removeItem('usuarioLogado');
+        window.location.href = '../html/login.html';
+    });
+}
+
 // função para abrir perfil
 
 function mostrarPerfil() {
@@ -179,10 +207,9 @@ function voltarHome() {
     const voltarHomeBtn = document.getElementById('voltarHome');
     voltarHomeBtn.addEventListener("click", function(){
         // Redireciona para a página inicial, que está na mesma pasta do dashboard.
-        window.location.href = 'login.html';
+        window.location.href = '../html/login.html';
     });
 }
 
 // Ativa o evento de clique assim que o script é carregado.
 voltarHome();
-
