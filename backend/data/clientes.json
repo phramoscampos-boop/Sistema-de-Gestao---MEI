@@ -1,0 +1,24 @@
+[
+  {
+    "id": "b5a73169-1071-4251-a347-941d4dd69252",
+    "nome": "Luíza",
+    "telefone": "77777777777",
+    "dataNascimento": "0001-01-01",
+    "cep": "45000000",
+    "servicoId": "24a02f8b-5034-43ad-8927-42df85ab341e",
+    "servicoNome": "Luzes",
+    "servicoValor": 120,
+    "criadoEm": "2026-10-13T19:17:10.368Z"
+  },
+  {
+    "id": "60e93e72-dcd6-4b5d-b7cc-4c9298b5294c",
+    "nome": "Estéfano",
+    "telefone": "88888888888",
+    "dataNascimento": "1234-11-11",
+    "cep": "45000000",
+    "servicoId": "24a02f8b-5034-43ad-8927-42df85ab341e",
+    "servicoNome": "Luzes",
+    "servicoValor": 120,
+    "criadoEm": "2026-10-13T19:19:51.068Z"
+  }
+]
