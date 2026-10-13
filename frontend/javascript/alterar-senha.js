@@ -1,0 +1,65 @@
+const formulario = document.getElementById('form-alterar-senha');
+const emailInput = document.getElementById('email-alterar');
+const senhaAtualInput = document.getElementById('senha-atual');
+const novaSenhaInput = document.getElementById('nova-senha');
+const confirmarNovaSenhaInput = document.getElementById('confirmar-nova-senha');
+const mensagemErro = document.getElementById('mensagem-erro');
+const mensagemSucesso = document.getElementById('mensagem-sucesso');
+const apiUrl = 'http://localhost:3000';
+
+function limparMensagens() {
+  mensagemErro.textContent = '';
+  mensagemErro.classList.remove('mostrar');
+  mensagemSucesso.textContent = '';
+  mensagemSucesso.classList.remove('mostrar');
+}
+
+function mostrarErro(mensagem) {
+  mensagemErro.textContent = mensagem;
+  mensagemErro.classList.add('mostrar');
+}
+
+formulario.addEventListener('submit', async (evento) => {
+  evento.preventDefault();
+  limparMensagens();
+
+  if (!emailInput.value.trim() || !emailInput.validity.valid ||
+      !senhaAtualInput.value || !novaSenhaInput.value || !confirmarNovaSenhaInput.value) {
+    mostrarErro('Preencha todos os campos com um e-mail válido.');
+    return;
+  }
+
+  if (novaSenhaInput.value.length < 6) {
+    mostrarErro('A nova senha deve ter pelo menos 6 caracteres.');
+    return;
+  }
+
+  if (novaSenhaInput.value !== confirmarNovaSenhaInput.value) {
+    mostrarErro('A confirmação da nova senha não corresponde.');
+    return;
+  }
+
+  try {
+    // O servidor confirma a senha atual e atualiza somente contas já existentes.
+    const resposta = await fetch(`${apiUrl}/alterar-senha`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: emailInput.value.trim().toLowerCase(),
+        senhaAtual: senhaAtualInput.value,
+        novaSenha: novaSenhaInput.value
+      })
+    });
+
+    const dadosResposta = await resposta.json();
+    if (!resposta.ok) {
+      throw new Error(dadosResposta.mensagem || 'Não foi possível alterar a senha.');
+    }
+
+    formulario.reset();
+    mensagemSucesso.textContent = dadosResposta.mensagem;
+    mensagemSucesso.classList.add('mostrar');
+  } catch (erro) {
+    mostrarErro(erro.message || 'Não foi possível alterar a senha.');
+  }
+});

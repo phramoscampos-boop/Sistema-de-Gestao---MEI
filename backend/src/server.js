@@ -2,11 +2,14 @@ import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
+import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const caminhoArquivoUsuarios = path.join(__dirname, '..', 'data', 'users.json');
+const caminhoArquivoClientes = path.join(__dirname, '..', 'data', 'clientes.json');
+const caminhoArquivoServicos = path.join(__dirname, '..', 'data', 'servicos.json');
 
 const app = express();
 
@@ -35,6 +38,31 @@ function salvarUsuariosNoArquivo(usuarios) {
   fs.writeFileSync(caminhoArquivoUsuarios, JSON.stringify(usuarios, null, 2));
 }
 
+// Lê e persiste cadastros em arquivos separados para mantê-los disponíveis após reiniciar o servidor.
+function lerRegistros(caminhoArquivo, tipo) {
+  const conteudo = fs.readFileSync(caminhoArquivo, 'utf-8');
+  const registros = JSON.parse(conteudo);
+
+  if (!Array.isArray(registros)) {
+    throw new Error(`O arquivo de ${tipo} deve conter uma lista.`);
+  }
+
+  return registros;
+}
+
+function salvarRegistros(caminhoArquivo, registros) {
+  fs.writeFileSync(caminhoArquivo, JSON.stringify(registros, null, 2));
+}
+
+function responderErroDeArquivo(res, erro, tipo) {
+  console.error(`Não foi possível acessar os dados de ${tipo}:`, erro.message);
+  return res.status(500).json({ mensagem: `Não foi possível acessar os dados de ${tipo}.` });
+}
+
+function apenasDigitos(valor) {
+  return String(valor || '').replace(/\D/g, '');
+}
+
 function normalizarUsuario(usuario, indice) {
   const nome = usuario.nome ?? usuario.user ?? `Usuário ${indice + 1}`;
   const email = usuario.email ?? usuario.user ?? '';
@@ -54,71 +82,8 @@ function obterUsuariosNormalizados() {
   return usuarios.map(normalizarUsuario);
 }
 
-function validarDadosCadastro({ nome, email, senha }) {
-  if (!nome || !email || !senha) {
-    return 'Preencha nome, e-mail e senha para continuar.';
-  }
-
-  if (String(nome).trim().length < 2) {
-    return 'O nome completo deve ter pelo menos 2 caracteres.';
-  }
-
-  if (String(email).trim().length < 5) {
-    return 'Informe um e-mail válido.';
-  }
-
-  if (String(senha).length < 6) {
-    return 'A senha deve ter pelo menos 6 caracteres.';
-  }
-
-  return null;
-}
-
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'html', 'login.html'));
-});
-
-app.get('/usuarios', (req, res) => {
-  const usuarios = obterUsuariosNormalizados();
-  res.json(usuarios);
-});
-
-app.post('/usuarios', (req, res) => {
-  const { nome, email, senha } = req.body || {};
-  const erroValidacao = validarDadosCadastro({ nome, email, senha });
-
-  if (erroValidacao) {
-    return res.status(400).json({ mensagem: erroValidacao });
-  }
-
-  const usuarios = obterUsuariosNormalizados();
-  const emailNormalizado = String(email).trim().toLowerCase();
-  const usuarioJaExiste = usuarios.some(
-    (usuario) => String(usuario.email).trim().toLowerCase() === emailNormalizado
-  );
-
-  if (usuarioJaExiste) {
-    return res.status(409).json({ mensagem: 'Este e-mail já está cadastrado.' });
-  }
-
-  const novoUsuario = {
-    id: Date.now(),
-    nome: String(nome).trim(),
-    email: emailNormalizado,
-    senha: String(senha)
-  };
-
-  usuarios.push(novoUsuario);
-  salvarUsuariosNoArquivo(usuarios);
-
-  return res.status(201).json({
-    mensagem: 'Usuário cadastrado com sucesso!',
-    usuario: {
-      id: novoUsuario.id,
-      nome: novoUsuario.nome,
-      email: novoUsuario.email
-    }
-  });
 });
 
 app.get('/dashboard.html', (req, res) => {
@@ -156,8 +121,182 @@ app.post('/login', (req, res) => {
   });
 });
 
-app.listen(3000, () => {
-    console.log('Servidor rodando em http://localhost:3000');  
+// A troca só altera a senha de uma conta existente após validar a senha atual.
+app.post('/alterar-senha', (req, res) => {
+  const { email, senhaAtual, novaSenha } = req.body || {};
+
+  if (!email || !senhaAtual || !novaSenha) {
+    return res.status(400).json({ mensagem: 'Preencha todos os campos.' });
+  }
+
+  if (String(novaSenha).length < 6) {
+    return res.status(400).json({ mensagem: 'A nova senha deve ter pelo menos 6 caracteres.' });
+  }
+
+  const usuarios = obterUsuariosNormalizados();
+  const emailDigitado = String(email).trim().toLowerCase();
+  const usuarioEncontrado = usuarios.find(
+    (usuario) => String(usuario.email).trim().toLowerCase() === emailDigitado
+  );
+
+  // A mesma resposta evita revelar se um e-mail está cadastrado.
+  if (!usuarioEncontrado || String(usuarioEncontrado.senha) !== String(senhaAtual)) {
+    return res.status(401).json({ mensagem: 'E-mail ou senha atual incorretos.' });
+  }
+
+  usuarioEncontrado.senha = String(novaSenha);
+
+  try {
+    salvarUsuariosNoArquivo(usuarios);
+  } catch (erro) {
+    console.error('Não foi possível salvar a nova senha:', erro.message);
+    return res.status(500).json({ mensagem: 'Não foi possível salvar a nova senha.' });
+  }
+
+  return res.json({ mensagem: 'Senha alterada com sucesso.' });
 });
+
+app.get('/clientes', (req, res) => {
+  try {
+    return res.json(lerRegistros(caminhoArquivoClientes, 'clientes'));
+  } catch (erro) {
+    return responderErroDeArquivo(res, erro, 'clientes');
+  }
+});
+
+app.post('/clientes', (req, res) => {
+  const { nome, telefone, dataNascimento, cep, servicoId } = req.body || {};
+  const nomeNormalizado = String(nome || '').trim();
+  const telefoneNormalizado = apenasDigitos(telefone);
+  const cepNormalizado = apenasDigitos(cep);
+
+  if (!nomeNormalizado || !telefoneNormalizado || !dataNascimento || !cepNormalizado || !servicoId) {
+    return res.status(400).json({ mensagem: 'Preencha todos os dados do cliente e escolha um serviço.' });
+  }
+
+  if (telefoneNormalizado.length < 10 || telefoneNormalizado.length > 11) {
+    return res.status(400).json({ mensagem: 'Informe um telefone com DDD válido.' });
+  }
+
+  if (cepNormalizado.length !== 8) {
+    return res.status(400).json({ mensagem: 'Informe um CEP com 8 números.' });
+  }
+
+  const dataNascimentoTexto = String(dataNascimento);
+  const partesData = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dataNascimentoTexto);
+  const [anoNascimento, mesNascimento, diaNascimento] = partesData
+    ? partesData.slice(1).map(Number)
+    : [];
+  const fimDoMes = new Date(0);
+  fimDoMes.setUTCFullYear(anoNascimento, mesNascimento, 0);
+  const dataValida = Boolean(partesData) &&
+    mesNascimento >= 1 && mesNascimento <= 12 &&
+    diaNascimento >= 1 && diaNascimento <= fimDoMes.getUTCDate();
+  if (!dataValida) {
+    return res.status(400).json({ mensagem: 'Informe uma data de nascimento válida.' });
+  }
+
+  try {
+    const servicos = lerRegistros(caminhoArquivoServicos, 'serviços');
+    const servico = servicos.find(
+      (item) => String(item.id) === String(servicoId) &&
+        item.ofertado === true &&
+        Number.isSafeInteger(Math.round(Number(item.valor) * 100)) &&
+        Number(item.valor) > 0
+    );
+
+    if (!servico) {
+      return res.status(400).json({ mensagem: 'O serviço selecionado não está disponível.' });
+    }
+
+    const clientes = lerRegistros(caminhoArquivoClientes, 'clientes');
+    const novoCliente = {
+      id: randomUUID(),
+      nome: nomeNormalizado,
+      telefone: telefoneNormalizado,
+      dataNascimento: String(dataNascimento),
+      cep: cepNormalizado,
+      servicoId: servico.id,
+      servicoNome: servico.nome,
+      servicoValor: servico.valor,
+      criadoEm: new Date().toISOString()
+    };
+
+    clientes.push(novoCliente);
+    salvarRegistros(caminhoArquivoClientes, clientes);
+    return res.status(201).json({ mensagem: 'Cliente cadastrado com sucesso.', cliente: novoCliente });
+  } catch (erro) {
+    return responderErroDeArquivo(res, erro, 'clientes ou serviços');
+  }
+});
+
+app.get('/servicos', (req, res) => {
+  try {
+    return res.json(lerRegistros(caminhoArquivoServicos, 'serviços'));
+  } catch (erro) {
+    return responderErroDeArquivo(res, erro, 'serviços');
+  }
+});
+
+app.post('/servicos', (req, res) => {
+  const { nome, duracaoMinutos, valor } = req.body || {};
+  const nomeNormalizado = String(nome || '').trim();
+  const duracao = Number(duracaoMinutos);
+  const valorNormalizado = Number(valor);
+
+  if (!nomeNormalizado || !Number.isInteger(duracao) || duracao < 1) {
+    return res.status(400).json({ mensagem: 'Informe o nome do serviço e uma duração em minutos maior que zero.' });
+  }
+
+  const valorEmCentavos = Math.round(valorNormalizado * 100);
+  if (!Number.isFinite(valorNormalizado) || !Number.isSafeInteger(valorEmCentavos) || valorEmCentavos <= 0) {
+    return res.status(400).json({ mensagem: 'Informe um valor de oferta maior que zero.' });
+  }
+
+  try {
+    const servicos = lerRegistros(caminhoArquivoServicos, 'serviços');
+    const novoServico = {
+      id: randomUUID(),
+      nome: nomeNormalizado,
+      duracaoMinutos: duracao,
+      valor: valorEmCentavos / 100,
+      ofertado: true
+    };
+
+    servicos.push(novoServico);
+    salvarRegistros(caminhoArquivoServicos, servicos);
+    return res.status(201).json({ mensagem: 'Serviço cadastrado com sucesso.', servico: novoServico });
+  } catch (erro) {
+    return responderErroDeArquivo(res, erro, 'serviços');
+  }
+});
+
+app.patch('/servicos/:id/oferta', (req, res) => {
+  const { ofertado } = req.body || {};
+  if (typeof ofertado !== 'boolean') {
+    return res.status(400).json({ mensagem: 'Informe se o serviço está sendo ofertado.' });
+  }
+
+  try {
+    const servicos = lerRegistros(caminhoArquivoServicos, 'serviços');
+    const servico = servicos.find((item) => String(item.id) === req.params.id);
+
+    if (!servico) {
+      return res.status(404).json({ mensagem: 'Serviço não encontrado.' });
+    }
+
+    servico.ofertado = ofertado;
+    salvarRegistros(caminhoArquivoServicos, servicos);
+    return res.json({ mensagem: 'Disponibilidade do serviço atualizada.', servico });
+  } catch (erro) {
+    return responderErroDeArquivo(res, erro, 'serviços');
+  }
+});
+
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  app.listen(3000, () => {
+    console.log('Servidor rodando em http://localhost:3000');
+  });
+}
 
 export { app };

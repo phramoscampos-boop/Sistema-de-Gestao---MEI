@@ -133,6 +133,23 @@
     transform: scale(0.95);
 }
 
+.link-troca-senha {
+    margin-top: 18px;
+    color: #fde0ed;
+    font-size: 14px;
+    text-decoration: underline;
+    transition: 0.3s;
+    border-radius: 5px;
+    padding: 2px 4px;
+    margin: 10px 0 0;
+}
+
+.link-troca-senha:hover {
+    color: #3b0a45;
+    text-decoration: none;
+    background: --background_janelas;
+}
+
 .mensagem-erro {
     display: none;
     margin: 0 0 10px;
@@ -144,6 +161,20 @@
 }
 
 .mensagem-erro.mostrar {
+    display: block;
+}
+
+.mensagem-sucesso {
+    display: none;
+    margin: 0 0 10px;
+    padding: 8px;
+    border-radius: 5px;
+    color: white;
+    background: #276749;
+    font-size: 14px;
+}
+
+.mensagem-sucesso.mostrar {
     display: block;
 }
 

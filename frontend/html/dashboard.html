@@ -29,7 +29,7 @@
               <span class="bt_clientes">Cadastrar clientes</span>
           </button>
 
-          <button class="cadastrar_servicos">
+          <button class="cadastrar_servicos" id="abrir_CadastroServico" type="button">
               <span class="bt_cadastrar_servicos">+</span>
               <span class="bt_servicos">Cadastrar serviços</span>
           </button>
@@ -69,58 +69,66 @@
         
       </div> 
 
-        <div class="dashboard_busca">
-        </div>
+        <section class="dashboard_busca" aria-labelledby="titulo-clientes">
+          <h2 id="titulo-clientes">Clientes cadastrados</h2>
+          <div id="lista-clientes" class="lista-clientes" aria-live="polite"></div>
+        </section>
 
       </div>
-        <div class="cadastro_cliente" id="cadastro_cliente">
+        <div class="cadastro_cliente" id="cadastro_cliente" aria-hidden="true">
           <div class="cadastro-content">
-            <span class="closeCadCli" id="closeCadCli">&times;</span>
+            <button class="closeCadCli" id="closeCadCli" type="button" aria-label="Fechar cadastro">&times;</button>
 
-            <h2>Cadastro > Clientes</h2>
-            <form action="" class="form-cadastro-cliente">
-              <label for="nome" >Nome: </label>
-              <input 
-                required type="nome" 
-                name="nome" 
-                id="nome-cad-cliente" 
-                class="style_cad-cliente">
-              
-              <br><label for="telefone" >Telefone: </label>
-              <input 
-                required type="telefone" 
-                name="telefone" 
-                id="telefone-cad-cliente" 
-                placeholder="(xx) 9xxxx-xxxx"
-                maxlength="15"
-                class="style_cad-cliente">
-              
-              <br><label for="nasc" >Data de nascimento: </label>
-              <input 
-                type="nasc" 
-                name="nasc" 
-                id="nasc-cad-cliente" 
-                placeholder="dd/mm/aaaa"
-                maxlength="10"
-                class="style_cad-cliente">
-              
-              <br><label for="cep" >CEP: </label>
-              <input 
-                type="cep" 
-                name="cep" 
-                id="cep-cad-cliente" 
-                placeholder="xxxxx-xxx"
-                maxlength="9"
-                class="style_cad-cliente">
+            <h2>Cadastro &gt; Clientes</h2>
+            <form class="form-cadastro-cliente" id="form-cadastro-cliente">
+              <label for="nome-cad-cliente">Nome</label>
+              <input required type="text" name="nome" id="nome-cad-cliente" class="style_cad-cliente" autocomplete="name">
 
-              <button class="bt_cadastrar" id="bt_cadastrar">Cadastrar</button>
+              <label for="telefone-cad-cliente">Telefone</label>
+              <input required type="tel" name="telefone" id="telefone-cad-cliente" placeholder="(xx) 9xxxx-xxxx" maxlength="15" class="style_cad-cliente" autocomplete="tel">
+
+              <label for="nasc-cad-cliente">Data de nascimento</label>
+              <input required type="date" name="dataNascimento" id="nasc-cad-cliente" class="style_cad-cliente">
+
+              <label for="cep-cad-cliente">CEP</label>
+              <input required type="text" name="cep" id="cep-cad-cliente" placeholder="xxxxx-xxx" maxlength="9" class="style_cad-cliente" inputmode="numeric" autocomplete="postal-code">
+
+              <label for="servico-cad-cliente">Serviço escolhido</label>
+              <select required name="servicoId" id="servico-cad-cliente" class="style_cad-cliente">
+                <option value="">Carregando serviços...</option>
+              </select>
+
+              <p id="mensagem-erro-cliente" class="mensagem-dashboard erro-dashboard" role="alert"></p>
+              <button class="bt_cadastrar" type="submit">Cadastrar cliente</button>
             </form>
           </div>
+        </div>
 
+        <div class="cadastro_cliente" id="cadastro_servico" aria-hidden="true">
+          <div class="cadastro-content">
+            <button class="closeCadCli" id="closeCadServico" type="button" aria-label="Fechar cadastro">&times;</button>
+            <h2>Cadastro &gt; Serviços</h2>
+
+            <form class="form-cadastro-cliente" id="form-cadastro-servico">
+              <label for="nome-servico">Nome do serviço</label>
+              <input required type="text" name="nome" id="nome-servico" class="style_cad-cliente">
+
+              <label for="duracao-servico">Tempo para concluir (minutos)</label>
+              <input required type="number" name="duracaoMinutos" id="duracao-servico" min="1" step="1" placeholder="Ex.: 60" class="style_cad-cliente">
+
+              <label for="valor-servico">Valor de oferta (R$)</label>
+              <input required type="number" name="valor" id="valor-servico" min="0.01" step="0.01" placeholder="Ex.: 80,00" class="style_cad-cliente">
+
+              <p id="mensagem-erro-servico" class="mensagem-dashboard erro-dashboard" role="alert"></p>
+              <button class="bt_cadastrar" type="submit">Cadastrar serviço</button>
+            </form>
+
+            <h3 class="titulo-servicos">Serviços cadastrados</h3>
+            <div id="lista-servicos" class="lista-servicos" aria-live="polite"></div>
+          </div>
         </div>
 
     </main>
-    <script src="https://unpkg.com/scrollreveal"></script>
     <script src="../javascript/dashboard_script.js"></script>
   </body>
 </html>

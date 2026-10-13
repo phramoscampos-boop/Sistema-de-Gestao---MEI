@@ -15,10 +15,13 @@ async function iniciarServidor() {
   return { servidor, porta };
 }
 
-test('cadastro salva usuário e permite login', async () => {
+test('somente usuários existentes podem entrar e trocar a própria senha', async () => {
   const { servidor, porta } = await iniciarServidor();
 
   try {
+    const respostaListagem = await fetch(`http://localhost:${porta}/usuarios`);
+    assert.equal(respostaListagem.status, 404);
+
     const respostaCadastro = await fetch(`http://localhost:${porta}/usuarios`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -29,22 +32,45 @@ test('cadastro salva usuário e permite login', async () => {
       })
     });
 
-    assert.equal(respostaCadastro.status, 201);
+    assert.equal(respostaCadastro.status, 404);
 
-    const respostaLogin = await fetch(`http://localhost:${porta}/login`, {
+    const respostaSenhaIncorreta = await fetch(`http://localhost:${porta}/alterar-senha`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: 'teste@empresa.com',
-        senha: '123456'
+        email: 'pedro@empresa.com',
+        senhaAtual: 'incorreta',
+        novaSenha: 'senhaNova123'
       })
     });
+    assert.equal(respostaSenhaIncorreta.status, 401);
 
-    assert.equal(respostaLogin.status, 200);
+    const respostaAlteracao = await fetch(`http://localhost:${porta}/alterar-senha`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: 'pedro@empresa.com',
+        senhaAtual: 'pedro123',
+        novaSenha: 'senhaNova123'
+      })
+    });
+    assert.equal(respostaAlteracao.status, 200);
 
-    const dadosLogin = await respostaLogin.json();
-    assert.equal(dadosLogin.usuario.email, 'teste@empresa.com');
+    const respostaLoginAntiga = await fetch(`http://localhost:${porta}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'pedro@empresa.com', senha: 'pedro123' })
+    });
+    assert.equal(respostaLoginAntiga.status, 401);
+
+    const respostaLoginNova = await fetch(`http://localhost:${porta}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'pedro@empresa.com', senha: 'senhaNova123' })
+    });
+    assert.equal(respostaLoginNova.status, 200);
   } finally {
+    // Restaura o arquivo compartilhado para não deixar o usuário de teste persistido.
     fs.writeFileSync(arquivoUsuarios, backupUsuarios);
 
     await new Promise((resolve, reject) => {

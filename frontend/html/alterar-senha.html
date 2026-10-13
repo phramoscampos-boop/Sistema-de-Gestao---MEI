@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Trocar senha - Sistema de Gestão MEI</title>
+    <link rel="stylesheet" href="../css/login.css" />
+  </head>
+  <body class="tela-login">
+    <main class="pagina-login">
+      <section class="boas-vindas">
+        <img class="logo" src="../assets/images/logo-mei-v2.svg" alt="Logo da MEI Gestão">
+        <h1>Sistema de Gestão - MEI</h1>
+        <p>Altere a senha da sua conta com segurança.</p>
+        <img class="ilustracao" src="../assets/images/calendario.svg" alt="Ilustração de calendário e organização de tarefas">
+      </section>
+
+      <section class="acesso">
+        <form class="login" id="form-alterar-senha" novalidate>
+          <h2>Trocar senha</h2>
+          <p>Informe sua senha atual e escolha uma nova.</p>
+
+          <label for="email-alterar" class="campo-login">
+            e-mail:
+            <input type="email" name="email" id="email-alterar" required placeholder="seuemail@empresa.com" class="credencial" autocomplete="email">
+          </label>
+
+          <label for="senha-atual" class="campo-login">
+            senha atual:
+            <input type="password" name="senha-atual" id="senha-atual" required class="credencial" autocomplete="current-password">
+          </label>
+
+          <label for="nova-senha" class="campo-login">
+            nova senha:
+            <input type="password" name="nova-senha" id="nova-senha" required minlength="6" placeholder="Mínimo de 6 caracteres" class="credencial" autocomplete="new-password">
+          </label>
+
+          <label for="confirmar-nova-senha" class="campo-login">
+            confirme a nova senha:
+            <input type="password" name="confirmar-nova-senha" id="confirmar-nova-senha" required minlength="6" class="credencial" autocomplete="new-password">
+          </label>
+
+          <p id="mensagem-erro" class="mensagem-erro" role="alert"></p>
+          <p id="mensagem-sucesso" class="mensagem-sucesso" role="status"></p>
+
+          <button type="submit" class="botao-login">Alterar senha</button>
+          <a class="link-troca-senha" href="/html/login.html">Voltar ao login</a>
+        </form>
+      </section>
+    </main>
+    <script src="../javascript/alterar-senha.js"></script>
+  </body>
+</html>

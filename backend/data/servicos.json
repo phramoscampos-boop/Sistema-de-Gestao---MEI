@@ -1,0 +1,16 @@
+[
+  {
+    "id": "24a02f8b-5034-43ad-8927-42df85ab341e",
+    "nome": "Luzes",
+    "duracaoMinutos": 120,
+    "valor": 120,
+    "ofertado": true
+  },
+  {
+    "id": "1b370e5e-7e74-499f-8a13-fcded3c44cab",
+    "nome": "Depilação de busto",
+    "duracaoMinutos": 10,
+    "valor": 40,
+    "ofertado": true
+  }
+]

@@ -7,6 +7,10 @@ html, body{
     font-family: 'Comfortaa';
 }
 
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
 :root {
 --background_janelas: #d66ca9;
 --shadow_janelas: 9px 8px 4px -2px rgba(0, 0, 0, 0.5);
@@ -86,8 +90,8 @@ html, body{
 
 .cadastrar_clientes, .cadastrar_servicos {
     position: fixed;
-    left: 550px;
-    width: 873px;
+    left: 29vw;
+    width: calc(71vw - 80px);
     height: 50px;
     border: none;
     background: none;
@@ -144,7 +148,7 @@ html, body{
     position: absolute;
     left: 73px;
     top: 0px;
-    width: 800px;
+    width: calc(100% - 73px);
     height: 50px;
     font-size: 30px;
     font-family: "Comfortaa";
@@ -157,13 +161,58 @@ html, body{
 .dashboard_busca{
     background-color: #fde0ed;
     position: fixed;
-    left: 550px;
-    width: 1150px;
-    height: 560px;
+    left: 29vw;
+    width: calc(71vw - 80px);
+    height: calc(100vh - 310px);
+    min-height: 320px;
     font-size: 30px;
     border-radius: 5%;
     border: 0px;
     top: 260px;
+}
+
+.dashboard_busca {
+    padding: 28px;
+    overflow-y: auto;
+}
+
+.dashboard_busca h2 {
+    margin: 0 0 22px;
+    color: #3b0a45;
+    font-size: 24px;
+}
+
+.lista-clientes {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 16px;
+}
+
+.cliente-card {
+    padding: 18px;
+    border: 1px solid rgba(59, 10, 69, 0.18);
+    border-radius: 14px;
+    background: #fff8fb;
+    color: #3b0a45;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+}
+
+.cliente-card h3 {
+    margin: 0 0 12px;
+    font-size: 18px;
+}
+
+.cliente-card p {
+    margin: 8px 0 0;
+    line-height: 1.45;
+}
+
+.mensagem-lista {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: #3b0a45;
+    font-size: 15px;
 }
 
 
@@ -226,7 +275,7 @@ html, body{
 /*INFORMAÇÕES DE PERFIL*/
 
 .profile_info {
-    display: none; /* começa escondido */
+    display: flex;
     position: absolute;
     top: 115px;
     right: 15px;
@@ -240,10 +289,19 @@ html, body{
     justify-content: center;
     align-items: center;
     z-index: 999; /*deixar sobreposto a outros elementos*/
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-8px);
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s;
 }
 
 .profile_info.aberto {
-    display: flex; /* mostra o menu */
+    visibility: visible;
+    pointer-events: auto;
+    opacity: 1;
+    transform: translateY(0);
+    transition-delay: 0s;
     flex-direction: column; /* organiza os itens em coluna */
 }
 
@@ -282,20 +340,50 @@ html, body{
     padding: 5px;
 }
 
+.botao-sair {
+    background: #3b0a45;
+    color: #fdb0d2;
+    font-family: 'Comfortaa';
+    border: none;
+    border-radius: 10px;
+    padding: 10px;
+    margin-top: 25px;
+    transition: 0.3s;
+}
+
+.botao-sair:hover {
+    background: #fdb0d2;
+    color: #3b0a45;
+    transform: scale(1.05);
+    cursor: pointer;
+}
+
 /*PÁGINA DE CADASTRO DE CLIENTES*/
 
 .cadastro_cliente {
-    display: none; /* começa escondido */
+    display: flex;
     position: fixed;
-    inset: 0; /*forma de escrever: top: 0; right: 0; bottom: 0; left: 0;*/
-
+    inset: 0;
     width: 100%;
-    height: 100%;
-
+    height: 100vh;
+    height: 100dvh;
+    padding: 24px;
     justify-content: center;
     align-items: center;
+    overflow-y: auto;
+    z-index: 999;
+    background: rgba(24, 5, 28, 0.28);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.24s ease, visibility 0s linear 0.24s;
+}
 
-    z-index: 999; /*deixar sobreposto a outros elementos*/
+.cadastro_cliente.aberto {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition-delay: 0s;
 }
 
 .cadastro-content {
@@ -311,6 +399,17 @@ html, body{
     box-shadow: var(--shadow_janelas);
     font-family: 'Comfortaa';
     color: white;
+    max-height: 90vh;
+    max-height: calc(100dvh - 48px);
+    overflow-y: auto;
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+    transition: opacity 0.24s ease, transform 0.24s ease;
+}
+
+.cadastro_cliente.aberto .cadastro-content {
+    opacity: 1;
+    transform: translateY(0) scale(1);
 }
 
 .cadastro-content h2{
@@ -318,18 +417,124 @@ html, body{
     margin-top: -5px;
 }
 
-input{
-    
-    display: block;
-    margin-bottom: 5px;
-    margin-top: 2px;
-    width: 280px;
-    font-family: 'Comfortaa';
+.form-cadastro-cliente {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 7px;
+    margin: 0 auto;
+    max-width: 360px;
 }
 
-label, input{
-    margin-left: 120px;
-    font-size: 105%;
+.form-cadastro-cliente label {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.form-cadastro-cliente input,
+.form-cadastro-cliente select {
+    display: block;
+    width: 100%;
+    min-height: 38px;
+    margin: 0 0 8px;
+    padding: 8px 10px;
+    border: 1px solid rgba(59, 10, 69, 0.35);
+    border-radius: 6px;
+    background: white;
+    font: 14px 'Comfortaa', sans-serif;
+}
+
+.mensagem-dashboard {
+    display: none;
+    margin: 4px 0;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.mensagem-dashboard.mostrar {
+    display: block;
+}
+
+.erro-dashboard {
+    color: #fff;
+}
+
+.titulo-servicos {
+    margin: 24px 0 12px;
+    text-align: center;
+}
+
+.lista-servicos {
+    display: grid;
+    gap: 10px;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.servico-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.16);
+    font-size: 13px;
+}
+
+.servico-item p {
+    margin: 5px 0 0;
+}
+
+@media (max-width: 600px) {
+    .cadastro_cliente {
+        align-items: flex-start;
+        padding: 16px;
+    }
+
+    .cadastro-content {
+        width: 100%;
+        max-height: calc(100dvh - 32px);
+        margin: auto 0;
+        padding: 28px 20px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cadastro_cliente,
+    .cadastro-content,
+    .profile_info {
+        transition-duration: 0.01ms;
+    }
+}
+
+.botao-oferta {
+    flex: 0 0 auto;
+    padding: 8px 10px;
+    border: 1px solid white;
+    border-radius: 7px;
+    color: white;
+    background: #3b0a45;
+    cursor: pointer;
+    font: 12px 'Comfortaa', sans-serif;
+}
+
+.botao-oferta:hover {
+    color: #3b0a45;
+    background: white;
+}
+
+.closeCadCli {
+    display: block;
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    padding: 0;
+    border: 0;
+    color: white;
+    background: transparent;
+    font: 30px 'Comfortaa', sans-serif;
+    cursor: pointer;
 }
 
 .home_blur {
@@ -338,12 +543,7 @@ label, input{
 
 /* botão de fechar cadastro de clientes */
 .closeCadCli{
-    display: inline-block;
-    position: relative;
-    font-family: 'Comfortaa';
-    font-size: 200%;
     user-select: none;
-    cursor: pointer;
     transition: transform 0.15s ease;
 }
 
@@ -379,4 +579,68 @@ label, input{
 .bt_cadastrar:active{
     transition: 0.5s;
     transform: scale(0.95);
+}
+
+@media (max-width: 1100px) {
+    html, body {
+        height: auto;
+        min-height: 100%;
+        overflow: auto;
+    }
+
+    .side_bar {
+        display: none;
+    }
+
+    .cadastrar_clientes,
+    .cadastrar_servicos {
+        position: relative;
+        top: auto;
+        left: auto;
+        width: 100%;
+        margin: 12px 0;
+    }
+
+    .home_page {
+        padding: 24px;
+    }
+
+    .dashboard_busca {
+        position: relative;
+        inset: auto;
+        width: 100%;
+        height: auto;
+        min-height: 320px;
+        margin-top: 24px;
+        border-radius: 18px;
+    }
+
+    .profile_container {
+        top: 20px;
+        right: 20px;
+        transform: scale(0.8);
+        transform-origin: top right;
+    }
+}
+
+@media (max-width: 600px) {
+    .home_page {
+        padding: 90px 16px 20px;
+    }
+
+    .bt_clientes,
+    .bt_servicos {
+        left: 60px;
+        width: calc(100% - 60px);
+        font-size: 19px;
+    }
+
+    .dashboard_busca {
+        padding: 18px;
+    }
+
+    .cadastro-content {
+        width: calc(100% - 32px);
+        padding: 28px 20px;
+    }
 }
