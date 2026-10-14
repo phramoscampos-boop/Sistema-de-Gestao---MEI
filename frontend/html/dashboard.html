@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <link rel="stylesheet" href="../css/dashboard.css" />
+    <link rel="stylesheet" href="../css/dashboard-crud.css" />
     <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
@@ -21,18 +22,6 @@
           <h2 class="voltarHome-text">Voltar para a página inicial</h2>
           <h1 class="elis">Elis</h1>
           <h1 class="la_belle">la Belle</h1>
-        </div>
-
-        <div class="home_cadastrar">
-          <button class="cadastrar_clientes" id="abrir_CadastroCliente">
-              <span class="bt_cadastrar_clientes">+</span>
-              <span class="bt_clientes">Cadastrar clientes</span>
-          </button>
-
-          <button class="cadastrar_servicos" id="abrir_CadastroServico" type="button">
-              <span class="bt_cadastrar_servicos">+</span>
-              <span class="bt_servicos">Cadastrar serviços</span>
-          </button>
         </div>
 
       <div class="profile_container"> 
@@ -69,17 +58,72 @@
         
       </div> 
 
-        <section class="dashboard_busca" aria-labelledby="titulo-clientes">
-          <h2 id="titulo-clientes">Clientes cadastrados</h2>
-          <div id="lista-clientes" class="lista-clientes" aria-live="polite"></div>
-        </section>
+        <div class="dashboard-main">
+          <header class="barra-navegacao">
+            <nav class="abas-dashboard" aria-label="Navegação principal">
+              <button type="button" class="aba-dashboard ativa" id="aba-clientes" aria-controls="painel-clientes" aria-selected="true">Clientes</button>
+              <button type="button" class="aba-dashboard" id="aba-servicos" aria-controls="painel-servicos" aria-selected="false">Serviços</button>
+              <button type="button" class="aba-dashboard" id="aba-atendimentos" aria-controls="painel-atendimentos" aria-selected="false">Fila de Atendimento</button>
+            </nav>
+            <form class="busca-global" id="form-busca-global" role="search">
+              <label class="sr-only" for="filtro-global">Filtrar por</label>
+              <select id="filtro-global" aria-label="Filtrar clientes por">
+                <option value="nome">Nome do cliente</option>
+                <option value="servico">Serviço</option>
+                <option value="idade">Idade</option>
+              </select>
+              <label class="sr-only" for="busca-global">Pesquisar</label>
+              <input id="busca-global" type="search" placeholder="Pesquisar clientes..." autocomplete="off">
+            </form>
+          </header>
+
+          <section class="dashboard_busca painel-lista" id="painel-clientes" aria-labelledby="titulo-clientes">
+            <div class="cabecalho-lista">
+              <div>
+                <h2 id="titulo-clientes">Clientes</h2>
+                <p>Gerencie seus clientes e os serviços associados.</p>
+              </div>
+              <div class="acoes-cabecalho">
+                <button class="botao-secundario" id="listar-servicos" type="button">Listar Serviços</button>
+                <button class="botao-primario" id="abrir_CadastroCliente" type="button">+ Cadastrar cliente</button>
+              </div>
+            </div>
+            <label class="sr-only" for="busca-clientes">Pesquisar clientes por nome ou serviço</label>
+            <input class="busca-lista" id="busca-clientes" type="search" placeholder="Pesquisar clientes por nome ou serviço..." autocomplete="off">
+            <div id="lista-clientes" class="lista-clientes" aria-live="polite"></div>
+          </section>
+
+          <section class="dashboard_busca painel-lista" id="painel-servicos" aria-labelledby="titulo-servicos" hidden>
+            <div class="cabecalho-lista">
+              <div>
+                <h2 id="titulo-servicos">Serviços</h2>
+                <p>Organize os serviços oferecidos pelo seu negócio.</p>
+              </div>
+              <button class="botao-primario" id="abrir_CadastroServico" type="button">+ Cadastrar serviço</button>
+            </div>
+            <label class="sr-only" for="busca-servicos">Pesquisar serviços</label>
+            <input class="busca-lista" id="busca-servicos" type="search" placeholder="Pesquisar serviços..." autocomplete="off">
+            <div id="lista-servicos" class="lista-servicos" aria-live="polite"></div>
+          </section>
+
+          <section class="dashboard_busca painel-lista" id="painel-atendimentos" aria-labelledby="titulo-atendimentos" hidden>
+            <div class="cabecalho-lista">
+              <div>
+                <h2 id="titulo-atendimentos">Fila de Atendimento</h2>
+                <p>Organize os horários e acompanhe cada atendimento.</p>
+              </div>
+              <button class="botao-primario" id="abrir_CadastroAtendimento" type="button">+ Novo atendimento</button>
+            </div>
+            <div id="lista-atendimentos" class="lista-atendimentos" aria-live="polite"></div>
+          </section>
+        </div>
 
       </div>
         <div class="cadastro_cliente" id="cadastro_cliente" aria-hidden="true">
           <div class="cadastro-content">
             <button class="closeCadCli" id="closeCadCli" type="button" aria-label="Fechar cadastro">&times;</button>
 
-            <h2>Cadastro &gt; Clientes</h2>
+            <h2 id="titulo-modal-cliente">Cadastro &gt; Clientes</h2>
             <form class="form-cadastro-cliente" id="form-cadastro-cliente">
               <label for="nome-cad-cliente">Nome</label>
               <input required type="text" name="nome" id="nome-cad-cliente" class="style_cad-cliente" autocomplete="name">
@@ -87,8 +131,8 @@
               <label for="telefone-cad-cliente">Telefone</label>
               <input required type="tel" name="telefone" id="telefone-cad-cliente" placeholder="(xx) 9xxxx-xxxx" maxlength="15" class="style_cad-cliente" autocomplete="tel">
 
-              <label for="nasc-cad-cliente">Data de nascimento</label>
-              <input required type="date" name="dataNascimento" id="nasc-cad-cliente" class="style_cad-cliente">
+              <label for="idade-cad-cliente">Idade</label>
+              <input required type="number" name="idade" id="idade-cad-cliente" min="1" max="120" step="1" inputmode="numeric" class="style_cad-cliente">
 
               <label for="cep-cad-cliente">CEP</label>
               <input required type="text" name="cep" id="cep-cad-cliente" placeholder="xxxxx-xxx" maxlength="9" class="style_cad-cliente" inputmode="numeric" autocomplete="postal-code">
@@ -99,7 +143,7 @@
               </select>
 
               <p id="mensagem-erro-cliente" class="mensagem-dashboard erro-dashboard" role="alert"></p>
-              <button class="bt_cadastrar" type="submit">Cadastrar cliente</button>
+              <button class="bt_cadastrar" id="salvar-cliente" type="submit">Cadastrar cliente</button>
             </form>
           </div>
         </div>
@@ -107,7 +151,7 @@
         <div class="cadastro_cliente" id="cadastro_servico" aria-hidden="true">
           <div class="cadastro-content">
             <button class="closeCadCli" id="closeCadServico" type="button" aria-label="Fechar cadastro">&times;</button>
-            <h2>Cadastro &gt; Serviços</h2>
+            <h2 id="titulo-modal-servico">Cadastro &gt; Serviços</h2>
 
             <form class="form-cadastro-cliente" id="form-cadastro-servico">
               <label for="nome-servico">Nome do serviço</label>
@@ -120,11 +164,54 @@
               <input required type="number" name="valor" id="valor-servico" min="0.01" step="0.01" placeholder="Ex.: 80,00" class="style_cad-cliente">
 
               <p id="mensagem-erro-servico" class="mensagem-dashboard erro-dashboard" role="alert"></p>
-              <button class="bt_cadastrar" type="submit">Cadastrar serviço</button>
+              <button class="bt_cadastrar" id="salvar-servico" type="submit">Cadastrar serviço</button>
             </form>
+          </div>
+        </div>
 
-            <h3 class="titulo-servicos">Serviços cadastrados</h3>
-            <div id="lista-servicos" class="lista-servicos" aria-live="polite"></div>
+        <div class="cadastro_cliente" id="cadastro_atendimento" aria-hidden="true">
+          <div class="cadastro-content">
+            <button class="closeCadCli" id="closeCadAtendimento" type="button" aria-label="Fechar atendimento">&times;</button>
+            <h2 id="titulo-modal-atendimento">Novo atendimento</h2>
+            <form class="form-cadastro-cliente" id="form-cadastro-atendimento">
+              <label for="cliente-atendimento">Cliente cadastrado</label>
+              <select id="cliente-atendimento" class="style_cad-cliente">
+                <option value="">Novo cliente</option>
+              </select>
+
+              <label for="nome-atendimento">Nome do cliente</label>
+              <input required type="text" id="nome-atendimento" class="style_cad-cliente" autocomplete="name">
+
+              <label for="telefone-atendimento">Telefone</label>
+              <input required type="tel" id="telefone-atendimento" class="style_cad-cliente" autocomplete="tel">
+
+              <label for="idade-atendimento">Idade</label>
+              <input required type="number" id="idade-atendimento" min="1" max="120" step="1" inputmode="numeric" class="style_cad-cliente">
+
+              <label for="data-atendimento">Data do atendimento</label>
+              <input required type="date" id="data-atendimento" class="style_cad-cliente">
+
+              <label for="horario-atendimento">Horário previsto</label>
+              <input required type="time" id="horario-atendimento" class="style_cad-cliente">
+
+              <label for="servico-atendimento">Serviço desejado</label>
+              <select required id="servico-atendimento" class="style_cad-cliente">
+                <option value="">Carregando serviços...</option>
+              </select>
+
+              <div id="campo-status-atendimento" hidden>
+                <label for="status-atendimento">Status</label>
+                <select id="status-atendimento" class="style_cad-cliente">
+                  <option value="aguardando">Aguardando</option>
+                  <option value="em atendimento">Em atendimento</option>
+                  <option value="concluído">Concluído</option>
+                  <option value="cancelado">Cancelado</option>
+                </select>
+              </div>
+
+              <p id="mensagem-erro-atendimento" class="mensagem-dashboard erro-dashboard" role="alert"></p>
+              <button class="bt_cadastrar" id="salvar-atendimento" type="submit">Adicionar à fila</button>
+            </form>
           </div>
         </div>
 
