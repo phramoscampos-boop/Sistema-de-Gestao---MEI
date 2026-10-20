@@ -247,8 +247,8 @@ html, body{
 
 .profile_img{
     position: absolute;
-    right: 50px;
-    top: 50px;
+    right: 10px;
+    top: 5px;
     width: 55px;
     height: 55px;
 } 
