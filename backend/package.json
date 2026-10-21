@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "description": "",
   "type": "module",
-  "main": "src/server.js",
+  "main": "src/routes/server.js",
   "scripts": {
-    "start": "node src/server.js",
-    "test": "node --test"
+    "start": "node src/routes/server.js",
+    "test": "node --test --test-concurrency=1"
   },
   "repository": {
     "type": "git",
@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/phramoscampos-boop/Sistema-de-Gestao---MEI#readme",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "fs": "^0.0.1-security"

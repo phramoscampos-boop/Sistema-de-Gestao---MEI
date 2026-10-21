@@ -4,7 +4,6 @@ const formLogin = document.getElementById('form-login');
 const emailInput = document.getElementById('email-login');
 const passwordInput = document.getElementById('password-login');
 const mensagemErro = document.getElementById('mensagem-erro');
-const apiUrl = 'http://localhost:3000';
 
 function mostrarErro(mensagem) {
   mensagemErro.textContent = mensagem;
@@ -43,7 +42,7 @@ async function fazerLogin() {
   }
 
   try {
-    const resposta = await fetch(`${apiUrl}/login`, {
+    const resposta = await fetch('/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -60,17 +59,11 @@ async function fazerLogin() {
       throw new Error(dadosResposta.mensagem || 'E-mail ou senha incorretos.');
     }
 
-    localStorage.setItem('usuarioLogado', JSON.stringify(dadosResposta.usuario));
     limparFormulario();
-    window.location.href = 'dashboard.html';
+    window.location.replace('/dashboard.html');
   } catch (erro) {
     mostrarErro(erro.message || 'Não foi possível fazer login.');
   }
-}
-
-const usuarioLogado = localStorage.getItem('usuarioLogado');
-if (usuarioLogado) {
-  window.location.href = 'dashboard.html';
 }
 
 formLogin.addEventListener('submit', function (event) {
@@ -78,3 +71,20 @@ formLogin.addEventListener('submit', function (event) {
   fazerLogin();
 });
 
+// Redireciona somente quando o servidor confirma que o cookie ainda representa uma sessão válida.
+fetch('/auth/session', { cache: 'no-store' })
+  .then(async (resposta) => {
+    if (resposta.status === 204) return;
+    if (resposta.ok) {
+      window.location.replace('/dashboard.html');
+      return;
+    }
+    if (resposta.status !== 401) {
+      const dados = await resposta.json();
+      throw new Error(dados.mensagem || 'Não foi possível verificar a sessão.');
+    }
+  })
+  .catch((erro) => {
+    console.error('Não foi possível verificar a sessão atual:', erro);
+    mostrarErro('Não foi possível verificar sua sessão. Tente novamente.');
+  });

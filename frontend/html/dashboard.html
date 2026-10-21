@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="../css/dashboard-crud.css" />
     <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="icon" type="image/png" href="../assets/images/logo-mei-v2.svg" />
+    <link rel="icon" type="image/svg+xml" href="../assets/images/logo-mei-v2.svg" />
 
     <title>Sistema de Gestão - MEI</title>
   </head>
@@ -66,31 +66,36 @@
               <button type="button" class="aba-dashboard" id="aba-servicos" aria-controls="painel-servicos" aria-selected="false">Serviços</button>
               <button type="button" class="aba-dashboard" id="aba-atendimentos" aria-controls="painel-atendimentos" aria-selected="false">Fila de Atendimento</button>
             </nav>
-            <form class="busca-global" id="form-busca-global" role="search">
-              <label class="sr-only" for="filtro-global">Filtrar por</label>
-              <select id="filtro-global" aria-label="Filtrar clientes por">
-                <option value="nome">Nome do cliente</option>
-                <option value="servico">Serviço</option>
-                <option value="idade">Idade</option>
-              </select>
-              <label class="sr-only" for="busca-global">Pesquisar</label>
-              <input id="busca-global" type="search" placeholder="Pesquisar clientes..." autocomplete="off">
-            </form>
+            <div class="logo-topo">
+              <img src="../assets/images/logo-mei-v2.svg" alt="Logo do Sistema de Gestão MEI">
+            </div>
           </header>
 
           <section class="dashboard_busca painel-lista" id="painel-clientes" aria-labelledby="titulo-clientes">
             <div class="cabecalho-lista">
               <div>
                 <h2 id="titulo-clientes">Clientes</h2>
-                <p>Gerencie seus clientes e os serviços associados.</p>
+                <p>Gerencie os dados e contatos dos seus clientes.</p>
               </div>
               <div class="acoes-cabecalho">
                 <button class="botao-secundario" id="listar-servicos" type="button">Listar Serviços</button>
                 <button class="botao-primario" id="abrir_CadastroCliente" type="button">+ Cadastrar cliente</button>
               </div>
             </div>
-            <label class="sr-only" for="busca-clientes">Pesquisar clientes por nome ou serviço</label>
-            <input class="busca-lista" id="busca-clientes" type="search" placeholder="Pesquisar clientes por nome ou serviço..." autocomplete="off">
+            <div class="barra-filtro-modulo">
+              <label class="sr-only" for="busca-clientes">Pesquisar clientes</label>
+              <input class="busca-lista" id="busca-clientes" type="search" placeholder="Pesquisar clientes..." autocomplete="off">
+              <img class="icone-filtro" src="../assets/images/filtro_img.svg" alt="">
+              <label class="sr-only" for="filtro-clientes">Filtrar clientes por</label>
+              <select class="filtro-lista" id="filtro-clientes" aria-label="Filtrar clientes por">
+                <option value="nome">Nome</option>
+                <option value="telefone">Telefone</option>
+                <option value="idade">Idade</option>
+                <option value="nascimento">Nascimento</option>
+                <option value="cadastro">Cadastro</option>
+                <option value="cep">CEP</option>
+              </select>
+            </div>
             <div id="lista-clientes" class="lista-clientes" aria-live="polite"></div>
           </section>
 
@@ -102,8 +107,18 @@
               </div>
               <button class="botao-primario" id="abrir_CadastroServico" type="button">+ Cadastrar serviço</button>
             </div>
-            <label class="sr-only" for="busca-servicos">Pesquisar serviços</label>
-            <input class="busca-lista" id="busca-servicos" type="search" placeholder="Pesquisar serviços..." autocomplete="off">
+            <div class="barra-filtro-modulo">
+              <label class="sr-only" for="busca-servicos">Pesquisar serviços</label>
+              <input class="busca-lista" id="busca-servicos" type="search" placeholder="Pesquisar serviços..." autocomplete="off">
+              <img class="icone-filtro" src="../assets/images/filtro_img.svg" alt="">
+              <label class="sr-only" for="filtro-servicos">Filtrar serviços por</label>
+              <select class="filtro-lista" id="filtro-servicos" aria-label="Filtrar serviços por">
+                <option value="nome">Nome</option>
+                <option value="duracao">Duração</option>
+                <option value="valor">Valor</option>
+                <option value="oferta">Disponibilidade</option>
+              </select>
+            </div>
             <div id="lista-servicos" class="lista-servicos" aria-live="polite"></div>
           </section>
 
@@ -114,6 +129,21 @@
                 <p>Organize os horários e acompanhe cada atendimento.</p>
               </div>
               <button class="botao-primario" id="abrir_CadastroAtendimento" type="button">+ Novo atendimento</button>
+            </div>
+            <div class="barra-filtro-modulo">
+              <label class="sr-only" for="busca-atendimentos">Pesquisar atendimentos</label>
+              <input class="busca-lista" id="busca-atendimentos" type="search" placeholder="Pesquisar na fila..." autocomplete="off">
+              <img class="icone-filtro" src="../assets/images/filtro_img.svg" alt="">
+              <label class="sr-only" for="filtro-atendimentos">Filtrar atendimentos por</label>
+              <select class="filtro-lista" id="filtro-atendimentos" aria-label="Filtrar atendimentos por">
+                <option value="nome">Cliente</option>
+                <option value="telefone">Telefone</option>
+                <option value="idade">Idade</option>
+                <option value="servico">Serviço</option>
+                <option value="data">Data</option>
+                <option value="horario">Horário</option>
+                <option value="status">Status</option>
+              </select>
             </div>
             <div id="lista-atendimentos" class="lista-atendimentos" aria-live="polite"></div>
           </section>
@@ -132,16 +162,11 @@
               <label for="telefone-cad-cliente">Telefone</label>
               <input required type="tel" name="telefone" id="telefone-cad-cliente" placeholder="(xx) 9xxxx-xxxx" maxlength="15" class="style_cad-cliente" autocomplete="tel">
 
-              <label for="idade-cad-cliente">Idade</label>
-              <input required type="number" name="idade" id="idade-cad-cliente" min="1" max="120" step="1" inputmode="numeric" class="style_cad-cliente">
+              <label for="data-nascimento-cliente">Data de nascimento</label>
+              <input required type="date" name="dataNascimento" id="data-nascimento-cliente" min="1900-01-01" class="style_cad-cliente">
 
               <label for="cep-cad-cliente">CEP</label>
               <input required type="text" name="cep" id="cep-cad-cliente" placeholder="xxxxx-xxx" maxlength="9" class="style_cad-cliente" inputmode="numeric" autocomplete="postal-code">
-
-              <label for="servico-cad-cliente">Serviço escolhido</label>
-              <select required name="servicoId" id="servico-cad-cliente" class="style_cad-cliente">
-                <option value="">Carregando serviços...</option>
-              </select>
 
               <p id="mensagem-erro-cliente" class="mensagem-dashboard erro-dashboard" role="alert"></p>
               <button class="bt_cadastrar" id="salvar-cliente" type="submit">Cadastrar cliente</button>
@@ -217,6 +242,6 @@
         </div>
 
     </main>
-    <script src="../javascript/dashboard_script.js"></script>
+    <script type="module" src="../javascript/dashboard_script.js"></script>
   </body>
 </html>

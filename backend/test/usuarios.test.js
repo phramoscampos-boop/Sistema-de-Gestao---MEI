@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-import { app } from '../src/server.js';
+import { app } from '../src/routes/server.js';
 
 const arquivoUsuarios = new URL('../data/users.json', import.meta.url);
 const backupUsuarios = fs.readFileSync(arquivoUsuarios, 'utf-8');
@@ -19,6 +19,15 @@ test('somente usuários existentes podem entrar e trocar a própria senha', asyn
   const { servidor, porta } = await iniciarServidor();
 
   try {
+    const respostaSessaoAusente = await fetch(`http://localhost:${porta}/auth/session`);
+    assert.equal(respostaSessaoAusente.status, 204);
+
+    const respostaSemSessao = await fetch(`http://localhost:${porta}/clientes`);
+    assert.equal(respostaSemSessao.status, 401);
+
+    const respostaDashboardSemSessao = await fetch(`http://localhost:${porta}/html/dashboard.html`);
+    assert.equal(respostaDashboardSemSessao.status, 401);
+
     const respostaListagem = await fetch(`http://localhost:${porta}/usuarios`);
     assert.equal(respostaListagem.status, 404);
 
@@ -69,6 +78,23 @@ test('somente usuários existentes podem entrar e trocar a própria senha', asyn
       body: JSON.stringify({ email: 'pedro@empresa.com', senha: 'senhaNova123' })
     });
     assert.equal(respostaLoginNova.status, 200);
+    assert.match(fs.readFileSync(arquivoUsuarios, 'utf-8'), /"\$2[aby]\$10\$/);
+
+    const cookieSessao = respostaLoginNova.headers.get('set-cookie').split(';', 1)[0];
+    const respostaDashboardAutenticada = await fetch(`http://localhost:${porta}/html/dashboard.html`, {
+      headers: { Cookie: cookieSessao }
+    });
+    assert.equal(respostaDashboardAutenticada.status, 200);
+
+    const respostaLogout = await fetch(`http://localhost:${porta}/logout`, {
+      method: 'POST',
+      headers: { Cookie: cookieSessao }
+    });
+    assert.equal(respostaLogout.status, 200);
+    const respostaAposLogout = await fetch(`http://localhost:${porta}/clientes`, {
+      headers: { Cookie: cookieSessao }
+    });
+    assert.equal(respostaAposLogout.status, 401);
   } finally {
     // Restaura o arquivo compartilhado para não deixar o usuário de teste persistido.
     fs.writeFileSync(arquivoUsuarios, backupUsuarios);

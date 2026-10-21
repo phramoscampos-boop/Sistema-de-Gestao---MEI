@@ -1,44 +1,13 @@
-// === REGISTRO DE USUÁRIO NO STORAGE ===
-function salvarUsuarioNoStorage(nome, email, senha) {
-    const usuarios = JSON.parse(localStorage.getItem('usuarios')) || [];
-
-    // Verificar se o e-mail já está cadastrado
-    const usuarioExiste = usuarios.some(u => u.email === email);
-    if (usuarioExiste) {
-        return { sucesso: false, mensagem: 'Este e-mail já está cadastrado!' };
-    }
-
-    // Adicionar novo usuário
-    const novoUsuario = { id: Date.now(), nome, email, senha };
-    usuarios.push(novoUsuario);
-    localStorage.setItem('usuarios', JSON.stringify(usuarios));
-
-    return { sucesso: true, mensagem: 'Usuário cadastrado com sucesso!' };
+// Consulta o servidor para validar a sessão HttpOnly, sem ler credenciais no navegador.
+async function verificarSessao() {
+  const resposta = await fetch('/auth/session', { cache: 'no-store' });
+  if (!resposta.ok) return null;
+  return (await resposta.json()).usuario;
 }
 
-// === LOGIN DE USUÁRIO ===
-function fazerLogin(email, senha) {
-    const usuarios = JSON.parse(localStorage.getItem('usuarios')) || [];
-    const usuario = usuarios.find(u => u.email === email && u.senha === senha);
-
-    if (usuario) {
-        const sessao = { id: usuario.id, nome: usuario.nome, email: usuario.email };
-        localStorage.setItem('usuarioLogado', JSON.stringify(sessao));
-        return true;
-    }
-    return false;
-}
-
-// === CONTROLE DE ACESSO (Dashboard e páginas protegidas) ===
-function verificarSessao() {
-    const usuarioLogado = localStorage.getItem('usuarioLogado');
-    if (!usuarioLogado) {
-        window.location.href = 'login.html';
-    }
-}
-
-// === LOGOUT ===
-function fazerLogout() {
-    localStorage.removeItem('usuarioLogado');
-    window.location.href = 'login.html';
+// Encerra no servidor a sessão vinculada ao cookie e substitui a página no histórico.
+async function fazerLogout() {
+  const resposta = await fetch('/logout', { method: 'POST', cache: 'no-store' });
+  if (!resposta.ok) throw new Error('Não foi possível encerrar a sessão.');
+  window.location.replace('/');
 }

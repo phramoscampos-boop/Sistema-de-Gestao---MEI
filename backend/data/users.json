@@ -3,7 +3,7 @@
     "id": 1,
     "nome": "Pedro",
     "email": "pedro@empresa.com",
-    "senha": "pedro123"
+    "senha": "$2b$10$S8gxeCipm7tv8iunIWKcX.ShcDLfFntryFT63QfkXS8mDrFWGq1Mu"
   },
   {
     "id": 2,

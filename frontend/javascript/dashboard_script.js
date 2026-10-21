@@ -1,9 +1,78 @@
-const apiUrl = 'http://localhost:3000';
-const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+// A página só inicializa os módulos depois que o servidor valida a sessão HttpOnly.
+(async function iniciarDashboard() {
+let usuarioLogado;
 
-if (!usuarioLogado) {
-  window.location.href = 'login.html';
+try {
+  const respostaSessao = await fetch('/auth/session', { cache: 'no-store' });
+  if (!respostaSessao.ok || respostaSessao.status === 204) {
+    window.location.replace('/');
+    return;
+  }
+  usuarioLogado = (await respostaSessao.json()).usuario;
+} catch (erro) {
+  console.error('Não foi possível verificar a sessão:', erro);
+  window.location.replace('/');
+  return;
 }
+
+const apiUrl = '';
+
+const tempoMaximoInativo = 60 * 60 * 1000;
+let ultimaAtividade = Date.now();
+let ultimoSinalDeAtividade = 0;
+let temporizadorInatividade;
+let encerramentoEmAndamento = false;
+
+async function encerrarSessao() {
+  if (encerramentoEmAndamento) return;
+  encerramentoEmAndamento = true;
+  clearTimeout(temporizadorInatividade);
+  try {
+    const resposta = await fetch('/logout', { method: 'POST', cache: 'no-store' });
+    if (!resposta.ok) throw new Error('O servidor não conseguiu encerrar a sessão.');
+    window.location.replace('/');
+  } catch (erro) {
+    encerramentoEmAndamento = false;
+    console.error('Não foi possível encerrar a sessão:', erro);
+    window.alert('Não foi possível sair com segurança. Verifique a conexão e tente novamente.');
+  }
+}
+
+function agendarExpiracao() {
+  clearTimeout(temporizadorInatividade);
+  temporizadorInatividade = setTimeout(encerrarSessao, tempoMaximoInativo);
+}
+
+function registrarAtividade() {
+  const agora = Date.now();
+  if (agora - ultimaAtividade >= tempoMaximoInativo) {
+    void encerrarSessao();
+    return;
+  }
+
+  ultimaAtividade = agora;
+  agendarExpiracao();
+  if (agora - ultimoSinalDeAtividade < 15000) return;
+  ultimoSinalDeAtividade = agora;
+
+  // O sinal periódico mantém a expiração do servidor alinhada à atividade real do usuário.
+  fetch('/auth/session', { cache: 'no-store' })
+    .then((resposta) => {
+      if (!resposta.ok || resposta.status === 204) void encerrarSessao();
+    })
+    .catch((erro) => console.error('Não foi possível renovar a sessão:', erro));
+}
+
+['pointerdown', 'keydown', 'mousemove', 'scroll', 'touchstart'].forEach((evento) => {
+  document.addEventListener(evento, registrarAtividade, { passive: true });
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' &&
+      Date.now() - ultimaAtividade >= tempoMaximoInativo) {
+    void encerrarSessao();
+  }
+});
+agendarExpiracao();
 
 function formatarValor(valor) {
   return new Intl.NumberFormat('pt-BR', {
@@ -24,10 +93,7 @@ if (emailUsuarioDashboard && usuarioLogado) {
 }
 
 const botaoSair = document.getElementById('botao-sair');
-botaoSair.addEventListener('click', () => {
-  localStorage.removeItem('usuarioLogado');
-  window.location.href = '../html/login.html';
-});
+botaoSair.addEventListener('click', encerrarSessao);
 
 const modalPerfil = document.getElementById('modalProfile');
 const setaPerfil = document.querySelector('.profile_arrow_img');
@@ -66,7 +132,6 @@ document.getElementById('abrir_CadastroCliente').addEventListener('click', async
   prepararFormularioCliente();
   limparMensagem(mensagemErroCliente);
   abrirModal(document.getElementById('cadastro_cliente'));
-  await carregarServicos();
 });
 document.getElementById('abrir_CadastroServico').addEventListener('click', async () => {
   prepararFormularioServico();
@@ -101,7 +166,6 @@ function selecionarAba(aba) {
     document.getElementById(`aba-${nome}`).classList.toggle('ativa', ativo);
     document.getElementById(`aba-${nome}`).setAttribute('aria-selected', String(ativo));
   });
-  document.getElementById('form-busca-global').hidden = aba !== 'clientes';
 }
 
 document.getElementById('aba-clientes').addEventListener('click', () => selecionarAba('clientes'));
@@ -117,17 +181,12 @@ document.getElementById('aba-atendimentos').addEventListener('click', async () =
   selecionarAba('atendimentos');
   await carregarAtendimentos();
 });
-document.getElementById('form-busca-global').addEventListener('submit', (evento) => evento.preventDefault());
-document.getElementById('busca-global').addEventListener('input', () => {
-  selecionarAba('clientes');
-  renderizarClientes();
-});
-document.getElementById('filtro-global').addEventListener('change', () => {
-  selecionarAba('clientes');
-  renderizarClientes();
-});
-document.getElementById('busca-clientes').addEventListener('input', renderizarClientes);
+document.getElementById('busca-clientes').addEventListener('input', () => renderizarClientes());
+document.getElementById('filtro-clientes').addEventListener('change', () => renderizarClientes());
 document.getElementById('busca-servicos').addEventListener('input', () => renderizarServicos());
+document.getElementById('filtro-servicos').addEventListener('change', () => renderizarServicos());
+document.getElementById('busca-atendimentos').addEventListener('input', () => renderizarAtendimentos());
+document.getElementById('filtro-atendimentos').addEventListener('change', () => renderizarAtendimentos());
 
 function mostrarMensagem(elemento, texto) {
   elemento.textContent = texto;
@@ -142,6 +201,8 @@ function limparMensagem(elemento) {
 function prepararFormularioCliente() {
   const formulario = document.getElementById('form-cadastro-cliente');
   formulario.reset();
+  delete formulario.dataset.legadoSemNascimento;
+  document.getElementById('data-nascimento-cliente').max = hojeLocalIso();
   delete formulario.dataset.clienteId;
   document.getElementById('titulo-modal-cliente').textContent = 'Cadastro > Clientes';
   document.getElementById('salvar-cliente').textContent = 'Cadastrar cliente';
@@ -168,6 +229,7 @@ function prepararFormularioAtendimento() {
   atualizarCamposClienteAtendimento();
 }
 
+// Envia requisições para a mesma origem e transforma erros da API em mensagens legíveis.
 async function requisitarJson(url, opcoes = {}) {
   const resposta = await fetch(`${apiUrl}${url}`, opcoes);
   const dados = await resposta.json();
@@ -188,8 +250,13 @@ function adicionarTexto(elemento, etiqueta, valor) {
 }
 
 function formatarData(data) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(data))) return '';
   const [ano, mes, dia] = data.split('-');
   return `${dia}/${mes}/${ano}`;
+}
+
+function formatarDataCadastro(dataHora) {
+  return dataHora ? formatarData(String(dataHora).slice(0, 10)) : '';
 }
 
 function formatarTelefone(telefone) {
@@ -209,9 +276,10 @@ function hojeLocalIso() {
   return `${ano}-${mes}-${dia}`;
 }
 
-function validarDadosCliente(dados) {
-  if (!dados.nome || !dados.telefone.trim() || !dados.idade || !dados.cep || !dados.servicoId) {
-    return 'Preencha todos os campos obrigatórios e escolha um serviço.';
+function validarDadosCliente(dados, manterIdadeLegada = false) {
+  if (!dados.nome || !dados.telefone.trim() ||
+      (!dados.dataNascimento && !manterIdadeLegada) || !dados.cep) {
+    return 'Preencha todos os campos obrigatórios.';
   }
   if (!/^[\p{L}]+(?:\s+[\p{L}]+)*$/u.test(dados.nome.normalize('NFC'))) {
     return 'O nome deve conter apenas letras e espaços.';
@@ -220,8 +288,8 @@ function validarDadosCliente(dados) {
       ![8, 9, 10, 11].includes(dados.telefone.replace(/\D/g, '').length)) {
     return 'Informe um telefone válido com 8 ou 9 dígitos, com ou sem DDD.';
   }
-  if (!/^\d{1,3}$/.test(dados.idade) || Number(dados.idade) < 1 || Number(dados.idade) > 120) {
-    return 'A idade deve ser um número inteiro entre 1 e 120.';
+  if (dados.dataNascimento && calcularIdade(dados.dataNascimento) === null) {
+    return 'Informe uma data de nascimento válida com ano de quatro dígitos.';
   }
   if (!/^[\d\s-]+$/.test(dados.cep.trim()) || dados.cep.replace(/\D/g, '').length !== 8) {
     return 'Informe um CEP com 8 números.';
@@ -234,6 +302,7 @@ function formatarCep(cep) {
   return `${numeros.slice(0, 5)}-${numeros.slice(5)}`;
 }
 
+// Normaliza acentos e espaços para manter os filtros consistentes em textos em português.
 function normalizarBusca(valor) {
   return String(valor ?? '')
     .normalize('NFD')
@@ -243,26 +312,36 @@ function normalizarBusca(valor) {
     .replace(/\s+/g, ' ');
 }
 
+// Busca cada termo em qualquer posição e ignora acentos, maiúsculas e espaços repetidos.
 function correspondeBusca(texto, busca) {
   const campos = normalizarBusca(texto);
   const termos = normalizarBusca(busca).split(' ').filter(Boolean);
   return termos.every((termo) => campos.includes(termo));
 }
 
+// Valida uma data ISO completa antes de calcular a idade, evitando aceitar datas impossíveis.
 function calcularIdade(dataNascimento) {
-  const [ano, mes, dia] = String(dataNascimento).split('-').map(Number);
+  const partes = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dataNascimento));
+  if (!partes) return null;
+  const [, ano, mes, dia] = partes.map(Number);
+  const nascimento = new Date(ano, mes - 1, dia);
+  if (nascimento.getFullYear() !== ano || nascimento.getMonth() !== mes - 1 ||
+      nascimento.getDate() !== dia) return null;
   const hoje = new Date();
   let idade = hoje.getFullYear() - ano;
   if (hoje.getMonth() + 1 < mes || (hoje.getMonth() + 1 === mes && hoje.getDate() < dia)) idade--;
-  return idade;
+  return idade >= 1 && idade <= 120 ? idade : null;
 }
 
 function idadeDoCliente(cliente) {
-  if (Number.isInteger(cliente.idade)) return cliente.idade;
-  const idade = cliente.dataNascimento ? calcularIdade(cliente.dataNascimento) : '';
-  return Number.isInteger(idade) && idade >= 1 && idade <= 120 ? idade : '';
+  const idadeCalculada = cliente.dataNascimento ? calcularIdade(cliente.dataNascimento) : null;
+  if (idadeCalculada !== null) return idadeCalculada;
+  return Number.isInteger(cliente.idade) && cliente.idade >= 1 && cliente.idade <= 120
+    ? cliente.idade
+    : '';
 }
 
+// Busca os dados de clientes e encaminha a lista para a renderização filtrada.
 async function carregarClientes() {
   const lista = document.getElementById('lista-clientes');
   lista.replaceChildren();
@@ -278,21 +357,21 @@ async function carregarClientes() {
   }
 }
 
+// Aplica o atributo escolhido e desenha os cartões dos clientes correspondentes.
 function renderizarClientes() {
   const lista = document.getElementById('lista-clientes');
-  const buscaLocal = normalizarBusca(document.getElementById('busca-clientes').value.trim());
-  const buscaGlobal = normalizarBusca(document.getElementById('busca-global').value.trim());
-  const filtroGlobal = document.getElementById('filtro-global').value;
+  const busca = document.getElementById('busca-clientes').value;
+  const filtro = document.getElementById('filtro-clientes').value;
   const clientes = clientesCarregados.filter((cliente) => {
-    const camposLocais = `${cliente.nome} ${cliente.servicoNome}`;
-    if (buscaLocal && !correspondeBusca(camposLocais, buscaLocal)) return false;
-    if (!buscaGlobal) return true;
-    if (filtroGlobal === 'servico') return correspondeBusca(cliente.servicoNome, buscaGlobal);
-    if (filtroGlobal === 'idade') {
-      const idadeBusca = Number(buscaGlobal.replace(/\s*anos?$/, '').trim());
-      return Number.isInteger(idadeBusca) && Number(idadeDoCliente(cliente)) === idadeBusca;
-    }
-    return correspondeBusca(cliente.nome, buscaGlobal);
+    const valores = {
+      nome: cliente.nome,
+      telefone: formatarTelefone(cliente.telefone),
+      idade: idadeDoCliente(cliente),
+      nascimento: formatarData(cliente.dataNascimento),
+      cadastro: formatarDataCadastro(cliente.criadoEm),
+      cep: formatarCep(cliente.cep)
+    };
+    return correspondeBusca(valores[filtro], busca);
   });
   lista.replaceChildren();
 
@@ -316,10 +395,7 @@ function renderizarClientes() {
       if (cliente.dataNascimento) adicionarTexto(card, 'Nascimento', formatarData(cliente.dataNascimento));
       adicionarTexto(card, 'Idade', `${idadeDoCliente(cliente)} anos`);
       if (cliente.cep) adicionarTexto(card, 'CEP', formatarCep(cliente.cep));
-      adicionarTexto(card, 'Serviço', cliente.servicoNome);
-      if (Number.isFinite(cliente.servicoValor)) {
-        adicionarTexto(card, 'Valor do serviço', formatarValor(cliente.servicoValor));
-      }
+      if (cliente.criadoEm) adicionarTexto(card, 'Cadastro', formatarDataCadastro(cliente.criadoEm));
       const acoes = document.createElement('div');
       acoes.className = 'acoes-card';
       const editar = document.createElement('button');
@@ -338,55 +414,29 @@ function renderizarClientes() {
   });
 }
 
+// Carrega os serviços usados no módulo de serviços e no formulário da fila.
 async function carregarServicos() {
-  const seletor = document.getElementById('servico-cad-cliente');
-  seletor.replaceChildren();
-
   try {
     servicosCarregados = await requisitarJson('/servicos');
-    const disponiveis = servicosCarregados.filter(
-      (servico) => servico.ofertado && Number.isFinite(servico.valor) && servico.valor > 0
-    );
-    const opcaoInicial = document.createElement('option');
-    opcaoInicial.value = '';
-    opcaoInicial.textContent = disponiveis.length
-      ? 'Selecione um serviço'
-      : 'Nenhum serviço ofertado';
-    seletor.append(opcaoInicial);
-    seletor.disabled = disponiveis.length === 0;
-
-    disponiveis.forEach((servico) => {
-      const opcao = document.createElement('option');
-      opcao.value = servico.id;
-      const valor = Number.isFinite(servico.valor)
-        ? formatarValor(servico.valor)
-        : 'valor não informado';
-      opcao.textContent = `${servico.nome} (${formatarDuracao(servico.duracaoMinutos)} - ${valor})`;
-      seletor.append(opcao);
-    });
-
     renderizarServicos();
   } catch (erro) {
-    seletor.disabled = true;
-    const opcaoErro = document.createElement('option');
-    opcaoErro.textContent = erro.message || 'Não foi possível carregar os serviços.';
-    seletor.append(opcaoErro);
     renderizarServicos(erro.message || 'Não foi possível carregar os serviços.');
   }
 }
 
+// Filtra serviços por nome, duração, valor ou disponibilidade e apresenta o resultado.
 function renderizarServicos(erroCarregamento = '') {
   const lista = document.getElementById('lista-servicos');
   const busca = document.getElementById('busca-servicos').value;
+  const filtro = document.getElementById('filtro-servicos').value;
   const servicos = servicosCarregados.filter((servico) => {
-    const campos = [
-      servico.nome,
-      formatarDuracao(servico.duracaoMinutos),
-      servico.valor,
-      formatarValor(servico.valor),
-      servico.ofertado ? 'ofertado disponível' : 'não ofertado indisponível'
-    ].join(' ');
-    return correspondeBusca(campos, busca);
+    const valores = {
+      nome: servico.nome,
+      duracao: `${servico.duracaoMinutos} ${formatarDuracao(servico.duracaoMinutos)}`,
+      valor: `${servico.valor} ${formatarValor(servico.valor)}`,
+      oferta: servico.ofertado ? 'ofertado disponível' : 'não ofertado indisponível'
+    };
+    return correspondeBusca(valores[filtro], busca);
   });
   lista.replaceChildren();
 
@@ -445,6 +495,7 @@ function renderizarServicos(erroCarregamento = '') {
   });
 }
 
+// Carrega os atendimentos e preserva a ordenação definida pela API.
 async function carregarAtendimentos() {
   const lista = document.getElementById('lista-atendimentos');
   lista.replaceChildren();
@@ -459,13 +510,31 @@ async function carregarAtendimentos() {
   }
 }
 
+// Filtra a fila pelo atributo escolhido antes de ordenar e desenhar os cartões.
+// Filtra a fila por dados do cliente, serviço, data, horário ou status.
 function renderizarAtendimentos() {
   const lista = document.getElementById('lista-atendimentos');
+  const busca = document.getElementById('busca-atendimentos').value;
+  const filtro = document.getElementById('filtro-atendimentos').value;
+  const atendimentos = atendimentosCarregados.filter((atendimento) => {
+    const valores = {
+      nome: atendimento.nome,
+      telefone: formatarTelefone(atendimento.telefone),
+      idade: atendimento.idade,
+      servico: atendimento.servicoNome,
+      data: `${atendimento.data} ${formatarData(atendimento.data)}`,
+      horario: atendimento.horario,
+      status: atendimento.status
+    };
+    return correspondeBusca(valores[filtro], busca);
+  });
   lista.replaceChildren();
-  if (atendimentosCarregados.length === 0) {
+  if (atendimentos.length === 0) {
     const vazio = document.createElement('p');
     vazio.className = 'mensagem-lista';
-    vazio.textContent = 'Ainda não há atendimentos na fila.';
+    vazio.textContent = atendimentosCarregados.length
+      ? 'Nenhum atendimento encontrado para essa pesquisa.'
+      : 'Ainda não há atendimentos na fila.';
     lista.append(vazio);
     return;
   }
@@ -476,7 +545,7 @@ function renderizarAtendimentos() {
     concluído: 'Concluído',
     cancelado: 'Cancelado'
   };
-  atendimentosCarregados.slice()
+  atendimentos.slice()
     .sort((a, b) => `${a.data} ${a.horario}`.localeCompare(`${b.data} ${b.horario}`))
     .forEach((atendimento) => {
       const card = document.createElement('article');
@@ -525,6 +594,7 @@ function renderizarAtendimentos() {
     });
 }
 
+// Sincroniza o cliente selecionado com os campos do formulário de atendimento.
 function atualizarSelecaoClienteAtendimento() {
   const seletor = document.getElementById('cliente-atendimento');
   seletor.replaceChildren();
@@ -540,6 +610,7 @@ function atualizarSelecaoClienteAtendimento() {
   });
 }
 
+// Preenche os dados do cliente escolhido e bloqueia campos que vêm do cadastro.
 function atualizarCamposClienteAtendimento() {
   const seletor = document.getElementById('cliente-atendimento');
   const cliente = clientesCarregados.find((item) => String(item.id) === seletor.value);
@@ -556,6 +627,7 @@ function atualizarCamposClienteAtendimento() {
   });
 }
 
+// Lista somente serviços ofertados para que possam ser vinculados a um atendimento.
 function preencherServicosAtendimento() {
   const seletor = document.getElementById('servico-atendimento');
   const disponiveis = servicosCarregados.filter((servico) => servico.ofertado);
@@ -714,18 +786,20 @@ async function alterarOferta(id, ofertado) {
   }
 }
 
-async function editarCliente(cliente) {
+function editarCliente(cliente) {
   prepararFormularioCliente();
   limparMensagem(mensagemErroCliente);
   abrirModal(document.getElementById('cadastro_cliente'));
-  await carregarServicos();
   const formulario = document.getElementById('form-cadastro-cliente');
   formulario.dataset.clienteId = cliente.id;
+  if (!cliente.dataNascimento && Number.isInteger(cliente.idade) &&
+      cliente.idade >= 1 && cliente.idade <= 120) {
+    formulario.dataset.legadoSemNascimento = 'true';
+  }
   document.getElementById('nome-cad-cliente').value = cliente.nome;
   document.getElementById('telefone-cad-cliente').value = formatarTelefone(cliente.telefone);
-  document.getElementById('idade-cad-cliente').value = idadeDoCliente(cliente);
+  document.getElementById('data-nascimento-cliente').value = cliente.dataNascimento || '';
   document.getElementById('cep-cad-cliente').value = formatarCep(cliente.cep);
-  document.getElementById('servico-cad-cliente').value = cliente.servicoId;
   document.getElementById('titulo-modal-cliente').textContent = 'Editar cliente';
   document.getElementById('salvar-cliente').textContent = 'Salvar alterações';
 }
@@ -793,11 +867,13 @@ formCliente.addEventListener('submit', async (evento) => {
   const dadosCliente = {
     nome: document.getElementById('nome-cad-cliente').value.trim().normalize('NFC').replace(/\s+/g, ' '),
     telefone: telefoneInput.value,
-    idade: document.getElementById('idade-cad-cliente').value,
-    cep: cepInput.value,
-    servicoId: document.getElementById('servico-cad-cliente').value
+    dataNascimento: document.getElementById('data-nascimento-cliente').value,
+    cep: cepInput.value
   };
-  const erroValidacao = validarDadosCliente(dadosCliente);
+  const erroValidacao = validarDadosCliente(
+    dadosCliente,
+    formCliente.dataset.legadoSemNascimento === 'true'
+  );
   if (erroValidacao) {
     mostrarMensagem(mensagemErroCliente, erroValidacao);
     return;
@@ -805,10 +881,12 @@ formCliente.addEventListener('submit', async (evento) => {
 
   try {
     const clienteId = formCliente.dataset.clienteId;
+    const dadosParaEnviar = { ...dadosCliente };
+    if (!dadosParaEnviar.dataNascimento) delete dadosParaEnviar.dataNascimento;
     await requisitarJson(clienteId ? `/clientes/${encodeURIComponent(clienteId)}` : '/clientes', {
       method: clienteId ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(dadosCliente)
+      body: JSON.stringify(dadosParaEnviar)
     });
     prepararFormularioCliente();
     fecharModais();
@@ -839,7 +917,6 @@ formServico.addEventListener('submit', async (evento) => {
     });
     prepararFormularioServico();
     await carregarServicos();
-    await carregarClientes();
     fecharModais();
   } catch (erro) {
     mostrarMensagem(mensagemErroServico, erro.message || 'Não foi possível cadastrar o serviço.');
@@ -847,9 +924,10 @@ formServico.addEventListener('submit', async (evento) => {
 });
 
 document.getElementById('voltarHome').addEventListener('click', () => {
-  window.location.href = '../html/login.html';
+  void encerrarSessao();
 });
 
 carregarClientes();
 carregarServicos();
 carregarAtendimentos();
+})();

@@ -4,42 +4,49 @@ import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
+import {
+  alterarSenha,
+  exigirAutenticacao,
+  fazerLogin,
+  fazerLogout,
+  obterSessaoAtual
+} from '../controllers/authController.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const caminhoArquivoUsuarios = path.join(__dirname, '..', 'data', 'users.json');
-const caminhoArquivoClientes = path.join(__dirname, '..', 'data', 'clientes.json');
-const caminhoArquivoServicos = path.join(__dirname, '..', 'data', 'servicos.json');
-const caminhoArquivoAtendimentos = path.join(__dirname, '..', 'data', 'atendimentos.json');
+// Resolve dados e arquivos estáticos pelas raízes do projeto, sem depender da pasta deste arquivo.
+const raizBackend = path.resolve(__dirname, '..', '..');
+const raizFrontend = path.resolve(raizBackend, '..', 'frontend');
+const caminhoArquivoClientes = path.join(raizBackend, 'data', 'clientes.json');
+const caminhoArquivoServicos = path.join(raizBackend, 'data', 'servicos.json');
+const caminhoArquivoAtendimentos = path.join(raizBackend, 'data', 'atendimentos.json');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-app.use(express.static(path.join(__dirname, '..', '..', 'frontend')));
+// Serve a página de login sem autenticação e protege a dashboard antes do static middleware.
+app.get('/', (req, res) => {
+  res.sendFile(path.join(raizFrontend, 'html', 'login.html'));
+});
 
-function lerUsuariosDoArquivo() {
-  try {
-    const conteudo = fs.readFileSync(caminhoArquivoUsuarios, 'utf-8');
-    const usuarios = JSON.parse(conteudo);
+app.get(['/dashboard.html', '/html/dashboard.html'], exigirAutenticacao, (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(path.join(raizFrontend, 'html', 'dashboard.html'));
+});
 
-    if (!Array.isArray(usuarios)) {
-      return [];
-    }
+app.post('/login', fazerLogin);
+app.get('/auth/session', obterSessaoAtual);
+app.post('/logout', fazerLogout);
+app.post('/alterar-senha', alterarSenha);
 
-    return usuarios;
-  } catch (erro) {
-    console.error('Não foi possível ler o arquivo de usuários:', erro.message);
-    return [];
-  }
-}
+app.use(express.static(raizFrontend, { index: false }));
 
-function salvarUsuariosNoArquivo(usuarios) {
-  fs.writeFileSync(caminhoArquivoUsuarios, JSON.stringify(usuarios, null, 2));
-}
+// Todas as rotas que leem ou alteram os cadastros exigem uma sessão válida.
+app.use(['/clientes', '/servicos', '/atendimentos'], exigirAutenticacao);
 
-// Lê e persiste cadastros em arquivos separados para mantê-los disponíveis após reiniciar o servidor.
+// Lê cada coleção JSON e rejeita arquivos malformados em vez de ocultar dados corrompidos.
 function lerRegistros(caminhoArquivo, tipo) {
   const conteudo = fs.readFileSync(caminhoArquivo, 'utf-8');
   const registros = JSON.parse(conteudo);
@@ -55,6 +62,7 @@ function salvarRegistros(caminhoArquivo, registros) {
   fs.writeFileSync(caminhoArquivo, JSON.stringify(registros, null, 2));
 }
 
+// Registra falhas de armazenamento e responde com erro consistente sem expor detalhes do disco.
 function responderErroDeArquivo(res, erro, tipo) {
   console.error(`Não foi possível acessar os dados de ${tipo}:`, erro.message);
   return res.status(500).json({ mensagem: `Não foi possível acessar os dados de ${tipo}.` });
@@ -90,6 +98,7 @@ function validarCep(valor) {
 }
 
 function calcularIdade(dataNascimento) {
+  // O padrão ISO exige quatro dígitos no ano e rejeita datas impossíveis do calendário.
   const partes = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dataNascimento || ''));
   if (!partes) return null;
   const [, ano, mes, dia] = partes.map(Number);
@@ -117,100 +126,7 @@ function validarDataAtendimento(data, horario) {
 
 const statusAtendimentoValidos = ['aguardando', 'em atendimento', 'concluído', 'cancelado'];
 
-function normalizarUsuario(usuario, indice) {
-  const nome = usuario.nome ?? usuario.user ?? `Usuário ${indice + 1}`;
-  const email = usuario.email ?? usuario.user ?? '';
-  const senha = usuario.senha ?? usuario.password ?? '';
-  const id = usuario.id ?? Date.now() + indice;
-
-  return {
-    id,
-    nome,
-    email: String(email).trim().toLowerCase(),
-    senha: String(senha)
-  };
-}
-
-function obterUsuariosNormalizados() {
-  const usuarios = lerUsuariosDoArquivo();
-  return usuarios.map(normalizarUsuario);
-}
-
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'html', 'login.html'));
-});
-
-app.get('/dashboard.html', (req, res) => {
-  console.log(`[${new Date().toLocaleString()}] Requisição recebida de: ${req.ip} ${req.method} ${req.url}`);
-  res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'html', 'dashboard.html'));
-});
-
-app.post('/login', (req, res) => {
-  const { email, senha } = req.body || {};
-
-  if (!email || !senha) {
-    return res.status(400).json({ mensagem: 'Informe o e-mail e a senha.' });
-  }
-
-  const usuarios = obterUsuariosNormalizados();
-  const emailDigitado = String(email).trim().toLowerCase();
-  const senhaDigitada = String(senha);
-
-  const usuarioEncontrado = usuarios.find((usuario) => {
-    const emailUsuario = String(usuario.email || '').trim().toLowerCase();
-    return (
-      (emailUsuario === emailDigitado || usuario.nome === emailDigitado) &&
-      String(usuario.senha) === senhaDigitada
-    );
-  });
-
-  if (!usuarioEncontrado) {
-    return res.status(401).json({ mensagem: 'E-mail ou senha incorretos.' });
-  }
-
-  const { senha: senhaDoUsuario, ...dadosUsuario } = usuarioEncontrado;
-
-  return res.json({
-    mensagem: 'Login realizado com sucesso!',
-    usuario: dadosUsuario
-  });
-});
-
-// A troca só altera a senha de uma conta existente após validar a senha atual.
-app.post('/alterar-senha', (req, res) => {
-  const { email, senhaAtual, novaSenha } = req.body || {};
-
-  if (!email || !senhaAtual || !novaSenha) {
-    return res.status(400).json({ mensagem: 'Preencha todos os campos.' });
-  }
-
-  if (String(novaSenha).length < 6) {
-    return res.status(400).json({ mensagem: 'A nova senha deve ter pelo menos 6 caracteres.' });
-  }
-
-  const usuarios = obterUsuariosNormalizados();
-  const emailDigitado = String(email).trim().toLowerCase();
-  const usuarioEncontrado = usuarios.find(
-    (usuario) => String(usuario.email).trim().toLowerCase() === emailDigitado
-  );
-
-  // A mesma resposta evita revelar se um e-mail está cadastrado.
-  if (!usuarioEncontrado || String(usuarioEncontrado.senha) !== String(senhaAtual)) {
-    return res.status(401).json({ mensagem: 'E-mail ou senha atual incorretos.' });
-  }
-
-  usuarioEncontrado.senha = String(novaSenha);
-
-  try {
-    salvarUsuariosNoArquivo(usuarios);
-  } catch (erro) {
-    console.error('Não foi possível salvar a nova senha:', erro.message);
-    return res.status(500).json({ mensagem: 'Não foi possível salvar a nova senha.' });
-  }
-
-  return res.json({ mensagem: 'Senha alterada com sucesso.' });
-});
-
+// O CRUD de clientes guarda apenas dados pessoais/de contato; serviços são escolhidos na fila.
 app.get('/clientes', (req, res) => {
   try {
     return res.json(lerRegistros(caminhoArquivoClientes, 'clientes'));
@@ -220,10 +136,10 @@ app.get('/clientes', (req, res) => {
 });
 
 app.post('/clientes', (req, res) => {
-  const { nome, telefone, idade, dataNascimento, cep, servicoId } = req.body || {};
+  const { nome, telefone, dataNascimento, cep } = req.body || {};
   const nomeNormalizado = validarNomeCliente(nome);
   const telefoneNormalizado = validarTelefoneCliente(telefone);
-  const idadeNormalizada = idade === undefined ? calcularIdade(dataNascimento) : validarIdade(idade);
+  const idadeNormalizada = calcularIdade(dataNascimento);
   const cepNormalizado = validarCep(cep);
 
   if (!nomeNormalizado) {
@@ -233,39 +149,21 @@ app.post('/clientes', (req, res) => {
     return res.status(400).json({ mensagem: 'Informe um telefone válido com 8 ou 9 dígitos, com ou sem DDD.' });
   }
   if (!idadeNormalizada) {
-    return res.status(400).json({ mensagem: 'Informe uma idade inteira entre 1 e 120 anos.' });
-  }
-  if (dataNascimento !== undefined && calcularIdade(dataNascimento) === null) {
     return res.status(400).json({ mensagem: 'Informe uma data de nascimento válida.' });
   }
-  if (!cepNormalizado || !servicoId) {
-    return res.status(400).json({ mensagem: 'Preencha o CEP com 8 números e escolha um serviço.' });
+  if (!cepNormalizado) {
+    return res.status(400).json({ mensagem: 'Preencha o CEP com 8 números.' });
   }
 
   try {
-    const servicos = lerRegistros(caminhoArquivoServicos, 'serviços');
-    const servico = servicos.find(
-      (item) => String(item.id) === String(servicoId) &&
-        item.ofertado === true &&
-        Number.isSafeInteger(Math.round(Number(item.valor) * 100)) &&
-        Number(item.valor) > 0
-    );
-
-    if (!servico) {
-      return res.status(400).json({ mensagem: 'O serviço selecionado não está disponível.' });
-    }
-
     const clientes = lerRegistros(caminhoArquivoClientes, 'clientes');
     const novoCliente = {
       id: randomUUID(),
       nome: nomeNormalizado,
       telefone: telefoneNormalizado,
       idade: idadeNormalizada,
-      ...(dataNascimento === undefined ? {} : { dataNascimento: String(dataNascimento) }),
+      dataNascimento,
       cep: cepNormalizado,
-      servicoId: servico.id,
-      servicoNome: servico.nome,
-      servicoValor: servico.valor,
       criadoEm: new Date().toISOString()
     };
 
@@ -273,15 +171,15 @@ app.post('/clientes', (req, res) => {
     salvarRegistros(caminhoArquivoClientes, clientes);
     return res.status(201).json({ mensagem: 'Cliente cadastrado com sucesso.', cliente: novoCliente });
   } catch (erro) {
-    return responderErroDeArquivo(res, erro, 'clientes ou serviços');
+    return responderErroDeArquivo(res, erro, 'clientes');
   }
 });
 
 app.put('/clientes/:id', (req, res) => {
-  const { nome, telefone, idade, dataNascimento, cep, servicoId } = req.body || {};
+  const { nome, telefone, dataNascimento, cep } = req.body || {};
   const nomeNormalizado = validarNomeCliente(nome);
   const telefoneNormalizado = validarTelefoneCliente(telefone);
-  const idadeNormalizada = idade === undefined ? calcularIdade(dataNascimento) : validarIdade(idade);
+  const idadeCalculada = dataNascimento === undefined ? null : calcularIdade(dataNascimento);
   const cepNormalizado = validarCep(cep);
 
   if (!nomeNormalizado) {
@@ -290,48 +188,41 @@ app.put('/clientes/:id', (req, res) => {
   if (!telefoneNormalizado) {
     return res.status(400).json({ mensagem: 'Informe um telefone válido com 8 ou 9 dígitos, com ou sem DDD.' });
   }
-  if (!idadeNormalizada) {
-    return res.status(400).json({ mensagem: 'Informe uma idade inteira entre 1 e 120 anos.' });
-  }
-  if (dataNascimento !== undefined && calcularIdade(dataNascimento) === null) {
+  if (dataNascimento !== undefined && !idadeCalculada) {
     return res.status(400).json({ mensagem: 'Informe uma data de nascimento válida.' });
   }
-  if (!cepNormalizado || !servicoId) {
-    return res.status(400).json({ mensagem: 'Preencha o CEP com 8 números e escolha um serviço.' });
+  if (!cepNormalizado) {
+    return res.status(400).json({ mensagem: 'Preencha o CEP com 8 números.' });
   }
 
   try {
-    const servicos = lerRegistros(caminhoArquivoServicos, 'serviços');
-    const servico = servicos.find(
-      (item) => String(item.id) === String(servicoId) &&
-        item.ofertado === true &&
-        Number.isSafeInteger(Math.round(Number(item.valor) * 100)) &&
-        Number(item.valor) > 0
-    );
-    if (!servico) {
-      return res.status(400).json({ mensagem: 'O serviço selecionado não está disponível.' });
-    }
-
     const clientes = lerRegistros(caminhoArquivoClientes, 'clientes');
     const cliente = clientes.find((item) => String(item.id) === req.params.id);
     if (!cliente) {
       return res.status(404).json({ mensagem: 'Cliente não encontrado.' });
     }
 
+    const idadeNormalizada = dataNascimento === undefined && !cliente.dataNascimento
+      ? validarIdade(cliente.idade)
+      : idadeCalculada;
+    if (!idadeNormalizada) {
+      return res.status(400).json({ mensagem: 'Informe uma data de nascimento válida.' });
+    }
+
     Object.assign(cliente, {
       nome: nomeNormalizado,
       telefone: telefoneNormalizado,
       idade: idadeNormalizada,
-      cep: cepNormalizado,
-      servicoId: servico.id,
-      servicoNome: servico.nome,
-      servicoValor: servico.valor
+      cep: cepNormalizado
     });
-    if (dataNascimento !== undefined) cliente.dataNascimento = String(dataNascimento);
+    if (dataNascimento !== undefined) cliente.dataNascimento = dataNascimento;
+    delete cliente.servicoId;
+    delete cliente.servicoNome;
+    delete cliente.servicoValor;
     salvarRegistros(caminhoArquivoClientes, clientes);
     return res.json({ mensagem: 'Cliente atualizado com sucesso.', cliente });
   } catch (erro) {
-    return responderErroDeArquivo(res, erro, 'clientes ou serviços');
+    return responderErroDeArquivo(res, erro, 'clientes');
   }
 });
 
@@ -351,6 +242,7 @@ app.delete('/clientes/:id', (req, res) => {
   }
 });
 
+// A fila guarda os dados do serviço no atendimento para preservar o histórico após alterações.
 app.get('/atendimentos', (req, res) => {
   try {
     const atendimentos = lerRegistros(caminhoArquivoAtendimentos, 'atendimentos');
@@ -605,18 +497,10 @@ app.put('/servicos/:id', (req, res) => {
       duracaoMinutos: duracao,
       valor: valorEmCentavos / 100
     });
-    const clientes = lerRegistros(caminhoArquivoClientes, 'clientes');
-    clientes.forEach((cliente) => {
-      if (String(cliente.servicoId) === String(servico.id)) {
-        cliente.servicoNome = servico.nome;
-        cliente.servicoValor = servico.valor;
-      }
-    });
     salvarRegistros(caminhoArquivoServicos, servicos);
-    salvarRegistros(caminhoArquivoClientes, clientes);
     return res.json({ mensagem: 'Serviço atualizado com sucesso.', servico });
   } catch (erro) {
-    return responderErroDeArquivo(res, erro, 'serviços ou clientes');
+    return responderErroDeArquivo(res, erro, 'serviços');
   }
 });
 

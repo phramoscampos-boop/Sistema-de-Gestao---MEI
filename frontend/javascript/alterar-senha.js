@@ -5,7 +5,6 @@ const novaSenhaInput = document.getElementById('nova-senha');
 const confirmarNovaSenhaInput = document.getElementById('confirmar-nova-senha');
 const mensagemErro = document.getElementById('mensagem-erro');
 const mensagemSucesso = document.getElementById('mensagem-sucesso');
-const apiUrl = 'http://localhost:3000';
 
 function limparMensagens() {
   mensagemErro.textContent = '';
@@ -41,7 +40,7 @@ formulario.addEventListener('submit', async (evento) => {
 
   try {
     // O servidor confirma a senha atual e atualiza somente contas já existentes.
-    const resposta = await fetch(`${apiUrl}/alterar-senha`, {
+    const resposta = await fetch('/alterar-senha', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

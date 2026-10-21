@@ -2,22 +2,46 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-import { app } from '../src/server.js';
+import { app } from '../src/routes/server.js';
 
 const arquivoClientes = new URL('../data/clientes.json', import.meta.url);
 const arquivoServicos = new URL('../data/servicos.json', import.meta.url);
 const arquivoAtendimentos = new URL('../data/atendimentos.json', import.meta.url);
+const arquivoUsuarios = new URL('../data/users.json', import.meta.url);
+let cookieSessao = '';
+const fetch = (url, opcoes = {}) => globalThis.fetch(url, {
+  ...opcoes,
+  headers: {
+    ...opcoes.headers,
+    ...(cookieSessao ? { Cookie: cookieSessao } : {})
+  }
+});
 
 test('cadastra serviços e clientes, e atualiza a oferta do serviço', async () => {
   const backupClientes = fs.readFileSync(arquivoClientes, 'utf-8');
   const backupServicos = fs.readFileSync(arquivoServicos, 'utf-8');
   const backupAtendimentos = fs.readFileSync(arquivoAtendimentos, 'utf-8');
+  const backupUsuarios = fs.readFileSync(arquivoUsuarios, 'utf-8');
   const quantidadeClientesInicial = JSON.parse(backupClientes).length;
   const servidor = app.listen(0);
   await new Promise((resolve) => servidor.once('listening', resolve));
   const baseUrl = `http://localhost:${servidor.address().port}`;
 
   try {
+    fs.writeFileSync(arquivoAtendimentos, '[]');
+    const usuarios = JSON.parse(backupUsuarios);
+    const usuario = usuarios[0];
+    const senhaTeste = 'senhaTeste123';
+    usuarios[0] = { ...usuario, senha: senhaTeste };
+    fs.writeFileSync(arquivoUsuarios, JSON.stringify(usuarios, null, 2));
+    const respostaLogin = await globalThis.fetch(`${baseUrl}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: usuario.email, senha: senhaTeste })
+    });
+    assert.equal(respostaLogin.status, 200);
+    cookieSessao = respostaLogin.headers.get('set-cookie').split(';', 1)[0];
+
     const respostaServico = await fetch(`${baseUrl}/servicos`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -42,56 +66,75 @@ test('cadastra serviços e clientes, e atualiza a oferta do serviço', async () 
         nome: 'Cliente Teste',
         telefone: '(11) 91234-5678',
         dataNascimento: '1990-05-20',
-        cep: '12345-678',
-        servicoId: servico.id
+        cep: '12345-678'
       })
     });
     assert.equal(respostaCliente.status, 201);
+    const clienteCriado = (await respostaCliente.json()).cliente;
+    assert.equal(clienteCriado.idade, 36);
+    assert.equal(clienteCriado.servicoId, undefined);
 
     const respostaListaClientes = await fetch(`${baseUrl}/clientes`);
     const clientes = await respostaListaClientes.json();
     assert.equal(clientes.length, quantidadeClientesInicial + 1);
-    const clienteCriado = clientes.find((cliente) => cliente.servicoId === servico.id);
-    assert.equal(clienteCriado.servicoNome, 'Manicure');
-    assert.equal(clienteCriado.servicoValor, 75.5);
     assert.equal(clienteCriado.telefone, '11912345678');
     assert.equal(clienteCriado.idade, 36);
 
-    const respostaClienteComIdade = await fetch(`${baseUrl}/clientes`, {
+    const respostaClienteComNascimento = await fetch(`${baseUrl}/clientes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         nome: 'Ana Maria',
         telefone: '98765432',
-        idade: 28,
-        cep: '12345678',
-        servicoId: servico.id
+        dataNascimento: '2000-01-01',
+        cep: '12345678'
       })
     });
-    assert.equal(respostaClienteComIdade.status, 201);
-    const clienteComIdade = (await respostaClienteComIdade.json()).cliente;
-    assert.equal(clienteComIdade.idade, 28);
-    assert.equal(clienteComIdade.dataNascimento, undefined);
+    assert.equal(respostaClienteComNascimento.status, 201);
+    const clienteComNascimento = (await respostaClienteComNascimento.json()).cliente;
+    assert.equal(clienteComNascimento.idade, 26);
+    assert.equal(clienteComNascimento.dataNascimento, '2000-01-01');
 
-    const respostaEdicaoClienteComIdade = await fetch(`${baseUrl}/clientes/${clienteComIdade.id}`, {
+    const respostaEdicaoClienteComNascimento = await fetch(`${baseUrl}/clientes/${clienteComNascimento.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         nome: 'Ana Maria Silva',
         telefone: '98765432',
-        idade: 29,
-        cep: '12345678',
-        servicoId: servico.id
+        dataNascimento: '1997-09-10',
+        cep: '12345678'
       })
     });
-    assert.equal(respostaEdicaoClienteComIdade.status, 200);
-    assert.equal((await respostaEdicaoClienteComIdade.json()).cliente.idade, 29);
+    assert.equal(respostaEdicaoClienteComNascimento.status, 200);
+    assert.equal((await respostaEdicaoClienteComNascimento.json()).cliente.idade, 29);
+
+    const clienteLegado = {
+      id: 'cliente-legado-teste',
+      nome: 'Cliente Legado',
+      telefone: '11911112222',
+      idade: 42,
+      cep: '12345678'
+    };
+    const clientesComLegado = JSON.parse(fs.readFileSync(arquivoClientes, 'utf-8'));
+    clientesComLegado.push(clienteLegado);
+    fs.writeFileSync(arquivoClientes, JSON.stringify(clientesComLegado, null, 2));
+    const respostaEdicaoLegado = await fetch(`${baseUrl}/clientes/${clienteLegado.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nome: 'Cliente Legado Atualizado',
+        telefone: clienteLegado.telefone,
+        cep: clienteLegado.cep
+      })
+    });
+    assert.equal(respostaEdicaoLegado.status, 200);
+    assert.equal((await respostaEdicaoLegado.json()).cliente.idade, 42);
 
     const clientesInvalidos = [
-      { nome: 'Cliente 123', telefone: '11912345678', idade: 30 },
-      { nome: 'Cliente Teste', telefone: 'telefone', idade: 30 },
-      { nome: 'Cliente Teste', telefone: '11912345678', idade: 30.5 },
-      { nome: 'Cliente Teste', telefone: '11912345678', idade: 121 }
+      { nome: 'Cliente 123', telefone: '11912345678', dataNascimento: '1990-05-20' },
+      { nome: 'Cliente Teste', telefone: 'telefone', dataNascimento: '1990-05-20' },
+      { nome: 'Cliente Teste', telefone: '11912345678', dataNascimento: '19900-05-20' },
+      { nome: 'Cliente Teste', telefone: '11912345678', dataNascimento: '2027-01-01' }
     ];
     for (const dadosInvalidos of clientesInvalidos) {
       const respostaInvalida = await fetch(`${baseUrl}/clientes`, {
@@ -99,8 +142,7 @@ test('cadastra serviços e clientes, e atualiza a oferta do serviço', async () 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...dadosInvalidos,
-          cep: '12345678',
-          servicoId: servico.id
+          cep: '12345678'
         })
       });
       assert.equal(respostaInvalida.status, 400);
@@ -113,18 +155,19 @@ test('cadastra serviços e clientes, e atualiza a oferta do serviço', async () 
     });
     assert.equal(respostaOferta.status, 200);
 
-    const respostaClienteSemServicoOfertado = await fetch(`${baseUrl}/clientes`, {
+    const respostaClienteSemServico = await fetch(`${baseUrl}/clientes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         nome: 'Outro Cliente',
         telefone: '11912345678',
         dataNascimento: '1990-05-20',
-        cep: '12345678',
-        servicoId: servico.id
+        cep: '12345678'
       })
     });
-    assert.equal(respostaClienteSemServicoOfertado.status, 400);
+    assert.equal(respostaClienteSemServico.status, 201);
+    const clienteSemServico = (await respostaClienteSemServico.json()).cliente;
+    assert.equal(clienteSemServico.servicoId, undefined);
 
     const respostaReoferta = await fetch(`${baseUrl}/servicos/${servico.id}/oferta`, {
       method: 'PATCH',
@@ -139,13 +182,6 @@ test('cadastra serviços e clientes, e atualiza a oferta do serviço', async () 
       body: JSON.stringify({ nome: 'Manicure atualizada', duracaoMinutos: 50, valor: 80 })
     });
     assert.equal(respostaEdicaoServico.status, 200);
-    const respostaListaAtualizada = await fetch(`${baseUrl}/clientes`);
-    const clientesAtualizados = await respostaListaAtualizada.json();
-    const clienteComServicoAtualizado = clientesAtualizados.find(
-      (cliente) => cliente.id === clienteCriado.id
-    );
-    assert.equal(clienteComServicoAtualizado.servicoNome, 'Manicure atualizada');
-    assert.equal(clienteComServicoAtualizado.servicoValor, 80);
 
     const respostaEdicaoCliente = await fetch(`${baseUrl}/clientes/${clienteCriado.id}`, {
       method: 'PUT',
@@ -154,14 +190,14 @@ test('cadastra serviços e clientes, e atualiza a oferta do serviço', async () 
         nome: 'Cliente Editado',
         telefone: '11987654321',
         dataNascimento: '1991-06-21',
-        cep: '87654-321',
-        servicoId: servico.id
+        cep: '87654-321'
       })
     });
     assert.equal(respostaEdicaoCliente.status, 200);
     const { cliente: clienteEditado } = await respostaEdicaoCliente.json();
     assert.equal(clienteEditado.nome, 'Cliente Editado');
-    assert.equal(clienteEditado.servicoNome, 'Manicure atualizada');
+    assert.equal(clienteEditado.idade, 35);
+    assert.equal(clienteEditado.servicoId, undefined);
 
     const respostaEdicaoClienteInvalida = await fetch(`${baseUrl}/clientes/${clienteCriado.id}`, {
       method: 'PUT',
@@ -169,9 +205,8 @@ test('cadastra serviços e clientes, e atualiza a oferta do serviço', async () 
       body: JSON.stringify({
         nome: '<script>alert(1)</script>',
         telefone: '11987654321',
-        idade: 35,
-        cep: '87654321',
-        servicoId: servico.id
+        dataNascimento: '1990-05-20',
+        cep: '87654321'
       })
     });
     assert.equal(respostaEdicaoClienteInvalida.status, 400);
@@ -307,14 +342,12 @@ test('cadastra serviços e clientes, e atualiza a oferta do serviço', async () 
       assert.equal(respostaRemocaoAtendimento.status, 200);
     }
 
-    const respostaExclusaoCliente = await fetch(`${baseUrl}/clientes/${clienteCriado.id}`, {
-      method: 'DELETE'
-    });
-    assert.equal(respostaExclusaoCliente.status, 200);
-    const respostaExclusaoClienteComIdade = await fetch(`${baseUrl}/clientes/${clienteComIdade.id}`, {
-      method: 'DELETE'
-    });
-    assert.equal(respostaExclusaoClienteComIdade.status, 200);
+    for (const cliente of [clienteCriado, clienteComNascimento, clienteSemServico, clienteLegado]) {
+      const respostaExclusaoCliente = await fetch(`${baseUrl}/clientes/${cliente.id}`, {
+        method: 'DELETE'
+      });
+      assert.equal(respostaExclusaoCliente.status, 200);
+    }
     const respostaExclusaoServico = await fetch(`${baseUrl}/servicos/${servico.id}`, {
       method: 'DELETE'
     });
@@ -323,6 +356,7 @@ test('cadastra serviços e clientes, e atualiza a oferta do serviço', async () 
     fs.writeFileSync(arquivoClientes, backupClientes);
     fs.writeFileSync(arquivoServicos, backupServicos);
     fs.writeFileSync(arquivoAtendimentos, backupAtendimentos);
+    fs.writeFileSync(arquivoUsuarios, backupUsuarios);
     await new Promise((resolve, reject) => {
       servidor.close((erro) => (erro ? reject(erro) : resolve()));
     });
