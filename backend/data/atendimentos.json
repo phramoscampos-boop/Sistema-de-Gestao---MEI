@@ -11,5 +11,18 @@
     "servicoNome": "Depilação de busto",
     "status": "concluído",
     "criadoEm": "2026-10-14T19:04:41.049Z"
+  },
+  {
+    "id": "448e2240-cb9d-478b-b816-3ad4c02095de",
+    "clienteId": "5d83b1d2-40fd-4ebb-9232-91e048216419",
+    "nome": "Daniel Aragão de Sousa Lima",
+    "telefone": "77988000000",
+    "idade": 19,
+    "data": "2026-10-23",
+    "horario": "18:30",
+    "servicoId": "77015450-6af5-451c-a0b8-cca0dd50ec23",
+    "servicoNome": "Progressiva",
+    "status": "aguardando",
+    "criadoEm": "2026-10-22T00:32:10.647Z"
   }
 ]

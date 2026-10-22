@@ -1,35 +1,11 @@
 [
   {
-    "id": "60e93e72-dcd6-4b5d-b7cc-4c9298b5294c",
-    "nome": "Estéfano",
-    "telefone": "88888888888",
-    "dataNascimento": "1234-11-11",
+    "id": "5d83b1d2-40fd-4ebb-9232-91e048216419",
+    "nome": "Daniel Aragão de Sousa Lima",
+    "telefone": "77988000000",
+    "idade": 19,
+    "dataNascimento": "2007-02-24",
     "cep": "45000000",
-    "servicoId": "24a02f8b-5034-43ad-8927-42df85ab341e",
-    "servicoNome": "Luzes",
-    "servicoValor": 120,
-    "criadoEm": "2026-10-13T19:19:51.068Z"
-  },
-  {
-    "id": "5a59d3a2-ea67-471f-8038-d47bf1d78776",
-    "nome": "Iago",
-    "telefone": "77777777777",
-    "dataNascimento": "2002-02-21",
-    "cep": "45000815",
-    "servicoId": "77015450-6af5-451c-a0b8-cca0dd50ec23",
-    "servicoNome": "Progressiva",
-    "servicoValor": 120,
-    "criadoEm": "2026-10-14T18:24:59.944Z"
-  },
-  {
-    "id": "236a1fab-71d4-4131-9a95-054ed28d240b",
-    "nome": "daniel",
-    "telefone": "19818239839",
-    "idade": 10,
-    "cep": "43050000",
-    "servicoId": "77015450-6af5-451c-a0b8-cca0dd50ec23",
-    "servicoNome": "Progressiva",
-    "servicoValor": 120,
-    "criadoEm": "2026-10-14T19:04:01.433Z"
+    "criadoEm": "2026-10-22T00:31:15.361Z"
   }
 ]
