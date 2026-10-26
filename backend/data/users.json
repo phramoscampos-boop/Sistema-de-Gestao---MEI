@@ -40,5 +40,16 @@
     "precisaAlterarSenha": false,
     "ativo": true,
     "criadoEm": "2026-10-26T14:39:51.138Z"
+  },
+  {
+    "id": "f82a06e2e477b020b4d5c54f1b426e54",
+    "nome": "Usuário teste 2",
+    "email": "usuario2@empresa.com",
+    "senha": "$2b$10$7M4DBJmbqMvHVSm3Ds8U0.lr29JwlonQDTt5aSxnkSPqZOVdmoYby",
+    "papel": "usuario",
+    "podeGerenciarUsuarios": false,
+    "precisaAlterarSenha": true,
+    "ativo": true,
+    "criadoEm": "2026-10-26T16:26:38.400Z"
   }
 ]

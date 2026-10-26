@@ -9,7 +9,7 @@
     "horario": "18:30",
     "servicoId": "77015450-6af5-451c-a0b8-cca0dd50ec23",
     "servicoNome": "Progressiva",
-    "status": "aguardando",
+    "status": "em atendimento",
     "criadoEm": "2026-10-22T00:32:10.647Z"
   },
   {
@@ -35,7 +35,7 @@
     "horario": "08:00",
     "servicoId": "a2ff1d19-8adc-4a21-8706-70ab2b2b8bff",
     "servicoNome": "Servi?o Teste 01",
-    "status": "aguardando",
+    "status": "concluído",
     "criadoEm": "2026-10-26T16:01:40.351Z"
   },
   {
