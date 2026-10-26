@@ -3,12 +3,42 @@
     "id": 1,
     "nome": "Pedro",
     "email": "pedro@empresa.com",
-    "senha": "$2b$10$S8gxeCipm7tv8iunIWKcX.ShcDLfFntryFT63QfkXS8mDrFWGq1Mu"
+    "senha": "$2b$10$S8gxeCipm7tv8iunIWKcX.ShcDLfFntryFT63QfkXS8mDrFWGq1Mu",
+    "papel": "administrador",
+    "podeGerenciarUsuarios": true,
+    "precisaAlterarSenha": false,
+    "ativo": true
   },
   {
     "id": 2,
     "nome": "Letícia",
     "email": "leticia@empresa.com",
-    "senha": "leticia123"
+    "senha": "$2b$10$u7q6VPSDKythqITu.fsjt.sEbEuKAfpFKKIBv6LKHZfSjwnEAYDuy",
+    "papel": "administrador",
+    "podeGerenciarUsuarios": true,
+    "precisaAlterarSenha": false,
+    "ativo": true
+  },
+  {
+    "id": "8cb7c508188eb2d330878cd2b1db1cbe",
+    "nome": "Elisângela",
+    "email": "elis@empresa.com",
+    "senha": "$2b$10$BhBVy2GDq7112wc9LJb31OvFeXk7NvEN/8iLhX84YdjVX9Kn9rXii",
+    "papel": "proprietaria",
+    "podeGerenciarUsuarios": true,
+    "precisaAlterarSenha": true,
+    "ativo": true,
+    "criadoEm": "2026-10-26T14:25:35.473Z"
+  },
+  {
+    "id": "dff2907d5db7fd79e9f855058942c237",
+    "nome": "Usuário teste",
+    "email": "usuario@empresa.com",
+    "senha": "$2b$10$G2Tc1NfDsfpKD7fxdCVnbu.WMsTa4E1oGbAjrGNkIoEdWUzBRexKe",
+    "papel": "usuario",
+    "podeGerenciarUsuarios": false,
+    "precisaAlterarSenha": false,
+    "ativo": true,
+    "criadoEm": "2026-10-26T14:39:51.138Z"
   }
 ]

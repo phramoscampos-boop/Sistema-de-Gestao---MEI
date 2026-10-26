@@ -6,11 +6,20 @@ import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
 import {
   alterarSenha,
+  alterarPapelUsuario,
+  alterarEmail,
+  cadastrarUsuario,
+  excluirUsuario,
   exigirAutenticacao,
+  exigirGestaoUsuarios,
+  exigirSenhaAtualizada,
   fazerLogin,
   fazerLogout,
-  obterSessaoAtual
+  listarUsuarios,
+  obterSessaoAtual,
+  resetarSenhaUsuario
 } from '../controllers/authController.js';
+import { atualizarHorarios, obterHorarios } from '../controllers/settingsController.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,6 +42,9 @@ app.get('/', (req, res) => {
 
 app.get(['/dashboard.html', '/html/dashboard.html'], exigirAutenticacao, (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
+  if (req.usuarioAutenticado.precisaAlterarSenha) {
+    return res.redirect('/html/alterar-senha.html');
+  }
   res.sendFile(path.join(raizFrontend, 'html', 'dashboard.html'));
 });
 
@@ -40,11 +52,24 @@ app.post('/login', fazerLogin);
 app.get('/auth/session', obterSessaoAtual);
 app.post('/logout', fazerLogout);
 app.post('/alterar-senha', alterarSenha);
+app.post('/alterar-email', exigirAutenticacao, exigirSenhaAtualizada, alterarEmail);
 
 app.use(express.static(raizFrontend, { index: false }));
 
 // Todas as rotas que leem ou alteram os cadastros exigem uma sessão válida.
-app.use(['/clientes', '/servicos', '/atendimentos'], exigirAutenticacao);
+app.use(
+  ['/clientes', '/servicos', '/atendimentos', '/configuracoes'],
+  exigirAutenticacao,
+  exigirSenhaAtualizada
+);
+
+app.get('/usuarios', exigirAutenticacao, exigirSenhaAtualizada, exigirGestaoUsuarios, listarUsuarios);
+app.post('/usuarios', exigirAutenticacao, exigirSenhaAtualizada, exigirGestaoUsuarios, cadastrarUsuario);
+app.patch('/usuarios/:id/papel', exigirAutenticacao, exigirSenhaAtualizada, exigirGestaoUsuarios, alterarPapelUsuario);
+app.post('/usuarios/:id/reset-senha', exigirAutenticacao, exigirSenhaAtualizada, exigirGestaoUsuarios, resetarSenhaUsuario);
+app.delete('/usuarios/:id', exigirAutenticacao, exigirSenhaAtualizada, exigirGestaoUsuarios, excluirUsuario);
+app.get('/configuracoes/horarios', obterHorarios);
+app.put('/configuracoes/horarios', exigirGestaoUsuarios, atualizarHorarios);
 
 // Lê cada coleção JSON e rejeita arquivos malformados em vez de ocultar dados corrompidos.
 function lerRegistros(caminhoArquivo, tipo) {
@@ -460,7 +485,8 @@ app.post('/servicos', (req, res) => {
       nome: nomeNormalizado,
       duracaoMinutos: duracao,
       valor: valorEmCentavos / 100,
-      ofertado: true
+      ofertado: true,
+      criadoEm: new Date().toISOString()
     };
 
     servicos.push(novoServico);

@@ -9,6 +9,10 @@ try {
     return;
   }
   usuarioLogado = (await respostaSessao.json()).usuario;
+  if (usuarioLogado.precisaAlterarSenha) {
+    window.location.replace('/html/alterar-senha.html');
+    return;
+  }
 } catch (erro) {
   console.error('Não foi possível verificar a sessão:', erro);
   window.location.replace('/');
@@ -83,6 +87,20 @@ function formatarValor(valor) {
 
 const nomeUsuarioDashboard = document.getElementById('nome-usuario-dashboard');
 const emailUsuarioDashboard = document.getElementById('email-usuario-dashboard');
+const saudacaoUsuario = document.getElementById('saudacao-usuario');
+if (saudacaoUsuario) saudacaoUsuario.textContent = `Olá, ${usuarioLogado.nome || 'Usuário'}!`;
+const cargos = {
+  proprietaria: 'Proprietária',
+  administrador: 'Administrador',
+  usuario: 'Usuário'
+};
+function nomeCargo(usuario) {
+  if (usuario?.papel === 'administrador' && usuario.podeGerenciarUsuarios) {
+    return 'Administrador+';
+  }
+  return cargos[usuario?.papel] || 'Usuário';
+}
+const cargoUsuario = nomeCargo(usuarioLogado);
 
 if (nomeUsuarioDashboard && usuarioLogado) {
   nomeUsuarioDashboard.textContent = usuarioLogado.nome || 'Usuário';
@@ -92,24 +110,76 @@ if (emailUsuarioDashboard && usuarioLogado) {
   emailUsuarioDashboard.textContent = usuarioLogado.email || 'E-mail não informado';
 }
 
+document.getElementById('cargo-usuario-dashboard').textContent = cargoUsuario;
+document.getElementById('cargo-perfil').textContent = cargoUsuario;
+document.getElementById('aba-usuarios').hidden = !usuarioLogado?.podeGerenciarUsuarios;
+document.getElementById('abrir-configuracao-turnos').hidden = !usuarioLogado?.podeGerenciarUsuarios;
+
 const botaoSair = document.getElementById('botao-sair');
 botaoSair.addEventListener('click', encerrarSessao);
 
+const formularioAlterarEmail = document.getElementById('form-alterar-email');
+document.getElementById('abrir-alteracao-email').addEventListener('click', () => {
+  formularioAlterarEmail.hidden = false;
+  document.getElementById('novo-email-perfil').value = usuarioLogado.email;
+  document.getElementById('senha-email-perfil').value = '';
+  const mensagem = document.getElementById('mensagem-email-perfil');
+  mensagem.textContent = '';
+  mensagem.classList.remove('mostrar');
+  document.getElementById('novo-email-perfil').focus();
+});
+
+formularioAlterarEmail.addEventListener('submit', async (evento) => {
+  evento.preventDefault();
+  const mensagem = document.getElementById('mensagem-email-perfil');
+  mensagem.textContent = '';
+  mensagem.classList.remove('mostrar');
+  try {
+    const resposta = await requisitarJson('/alterar-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        novoEmail: document.getElementById('novo-email-perfil').value.trim(),
+        senhaAtual: document.getElementById('senha-email-perfil').value
+      })
+    });
+    usuarioLogado.email = resposta.usuario.email;
+    emailUsuarioDashboard.textContent = resposta.usuario.email;
+    document.getElementById('novo-email-perfil').value = resposta.usuario.email;
+    document.getElementById('senha-email-perfil').value = '';
+    mensagem.textContent = resposta.mensagem;
+    mensagem.classList.add('mostrar');
+  } catch (erro) {
+    mensagem.textContent = erro.message || 'Não foi possível alterar o e-mail.';
+    mensagem.classList.add('mostrar');
+  }
+});
+
 const modalPerfil = document.getElementById('modalProfile');
 const setaPerfil = document.querySelector('.profile_arrow_img');
-document.getElementById('profile').addEventListener('click', () => {
-  modalPerfil.classList.toggle('aberto');
-  setaPerfil.classList.toggle('aberta');
+document.getElementById('profile').addEventListener('click', (evento) => {
+  const aberto = modalPerfil.hidden;
+  modalPerfil.hidden = !aberto;
+  document.getElementById('profile').setAttribute('aria-expanded', String(aberto));
+  setaPerfil.classList.toggle('aberta', aberto);
+  evento.stopPropagation();
 });
 
 const homePage = document.querySelector('.home_page');
 let clientesCarregados = [];
 let servicosCarregados = [];
 let atendimentosCarregados = [];
+let usuariosCarregados = [];
+let horariosTurnos = {
+  manha: { inicio: '08:00', fim: '12:00' },
+  tarde: { inicio: '13:00', fim: '19:00' }
+};
+const visualizacoes = { clientes: 'lista', servicos: 'lista', atendimentos: 'lista' };
 const modais = [
   document.getElementById('cadastro_cliente'),
   document.getElementById('cadastro_servico'),
-  document.getElementById('cadastro_atendimento')
+  document.getElementById('cadastro_atendimento'),
+  document.getElementById('modal-configurar-turnos')
 ];
 
 function fecharModais() {
@@ -159,7 +229,7 @@ document.addEventListener('keydown', (evento) => {
 });
 
 function selecionarAba(aba) {
-  const abas = ['clientes', 'servicos', 'atendimentos'];
+  const abas = ['clientes', 'servicos', 'atendimentos', 'usuarios'];
   abas.forEach((nome) => {
     const ativo = aba === nome;
     document.getElementById(`painel-${nome}`).hidden = !ativo;
@@ -173,20 +243,59 @@ document.getElementById('aba-servicos').addEventListener('click', async () => {
   selecionarAba('servicos');
   await carregarServicos();
 });
-document.getElementById('listar-servicos').addEventListener('click', async () => {
-  selecionarAba('servicos');
-  await carregarServicos();
-});
 document.getElementById('aba-atendimentos').addEventListener('click', async () => {
   selecionarAba('atendimentos');
-  await carregarAtendimentos();
+  await Promise.all([carregarAtendimentos(), carregarServicos(), carregarHorariosTurnos()]);
+});
+document.getElementById('aba-usuarios').addEventListener('click', async () => {
+  selecionarAba('usuarios');
+  await carregarUsuarios();
 });
 document.getElementById('busca-clientes').addEventListener('input', () => renderizarClientes());
 document.getElementById('filtro-clientes').addEventListener('change', () => renderizarClientes());
+document.getElementById('ordenar-clientes').addEventListener('change', () => renderizarClientes());
 document.getElementById('busca-servicos').addEventListener('input', () => renderizarServicos());
 document.getElementById('filtro-servicos').addEventListener('change', () => renderizarServicos());
+document.getElementById('ordenar-servicos').addEventListener('change', () => renderizarServicos());
 document.getElementById('busca-atendimentos').addEventListener('input', () => renderizarAtendimentos());
 document.getElementById('filtro-atendimentos').addEventListener('change', () => renderizarAtendimentos());
+document.getElementById('ordenar-atendimentos').addEventListener('change', () => renderizarAtendimentos());
+document.getElementById('filtro-status-atendimentos').addEventListener('change', () => renderizarAtendimentos());
+document.getElementById('turno-atendimentos').addEventListener('change', () => renderizarAtendimentos());
+document.getElementById('busca-usuarios').addEventListener('input', () => renderizarUsuarios());
+document.getElementById('campo-busca-usuarios').addEventListener('change', () => renderizarUsuarios());
+document.getElementById('filtro-cargo-usuarios').addEventListener('change', () => renderizarUsuarios());
+document.querySelectorAll('.botao-visualizacao').forEach((botao) => {
+  botao.addEventListener('click', () => {
+    const { modulo, visualizacao } = botao.dataset;
+    visualizacoes[modulo] = visualizacao;
+    document.querySelectorAll(`.botao-visualizacao[data-modulo="${modulo}"]`).forEach((item) => {
+      const ativo = item === botao;
+      item.classList.toggle('ativo', ativo);
+      item.setAttribute('aria-pressed', String(ativo));
+    });
+    if (modulo === 'clientes') renderizarClientes();
+    if (modulo === 'servicos') renderizarServicos();
+    if (modulo === 'atendimentos') renderizarAtendimentos();
+  });
+});
+
+document.getElementById('abrir-configuracao-turnos').addEventListener('click', async () => {
+  if (await prepararFormularioTurnos()) {
+    abrirModal(document.getElementById('modal-configurar-turnos'));
+  }
+});
+document.getElementById('fechar-configuracao-turnos').addEventListener('click', fecharModais);
+document.getElementById('form-turnos').addEventListener('submit', salvarFormularioTurnos);
+document.getElementById('form-cadastro-usuario').addEventListener('submit', cadastrarUsuarioDaTela);
+
+document.addEventListener('click', (evento) => {
+  if (!evento.target.closest('.profile_container')) {
+    modalPerfil.hidden = true;
+    document.getElementById('profile').setAttribute('aria-expanded', 'false');
+    setaPerfil.classList.remove('aberta');
+  }
+});
 
 function mostrarMensagem(elemento, texto) {
   elemento.textContent = texto;
@@ -341,6 +450,39 @@ function idadeDoCliente(cliente) {
     : '';
 }
 
+function ordenarPorData(registros, campo, crescente) {
+  return registros.slice().sort((a, b) => {
+    const dataA = Date.parse(a[campo] || '') || 0;
+    const dataB = Date.parse(b[campo] || '') || 0;
+    return (dataA - dataB) * (crescente ? 1 : -1);
+  });
+}
+
+function definirVisualizacao(lista, modulo) {
+  const modoLista = visualizacoes[modulo] === 'lista';
+  lista.classList.toggle('visualizacao-lista', modoLista);
+  lista.classList.toggle('visualizacao-cards', !modoLista);
+}
+
+function obterDuracaoAtendimento(atendimento) {
+  return servicosCarregados.find((servico) => (
+    String(servico.id) === String(atendimento.servicoId)
+  ))?.duracaoMinutos ?? Number.POSITIVE_INFINITY;
+}
+
+function minutosDoHorario(horario) {
+  const partes = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(String(horario || ''));
+  return partes ? Number(partes[1]) * 60 + Number(partes[2]) : -1;
+}
+
+function pertenceAoTurno(horario, turno) {
+  const minutos = minutosDoHorario(horario);
+  const faixa = horariosTurnos[turno];
+  if (!faixa || minutos < 0) return false;
+  return minutos >= minutosDoHorario(faixa.inicio) &&
+    minutos <= minutosDoHorario(faixa.fim);
+}
+
 // Busca os dados de clientes e encaminha a lista para a renderização filtrada.
 async function carregarClientes() {
   const lista = document.getElementById('lista-clientes');
@@ -360,9 +502,11 @@ async function carregarClientes() {
 // Aplica o atributo escolhido e desenha os cartões dos clientes correspondentes.
 function renderizarClientes() {
   const lista = document.getElementById('lista-clientes');
+  definirVisualizacao(lista, 'clientes');
   const busca = document.getElementById('busca-clientes').value;
   const filtro = document.getElementById('filtro-clientes').value;
-  const clientes = clientesCarregados.filter((cliente) => {
+  const ordem = document.getElementById('ordenar-clientes').value;
+  let clientes = clientesCarregados.filter((cliente) => {
     const valores = {
       nome: cliente.nome,
       telefone: formatarTelefone(cliente.telefone),
@@ -385,17 +529,30 @@ function renderizarClientes() {
       return;
   }
 
-  clientes.slice().reverse().forEach((cliente) => {
+  if (ordem === 'recentes' || ordem === 'antigos') {
+    clientes = ordenarPorData(clientes, 'criadoEm', ordem === 'antigos');
+  } else {
+    const direcao = ordem === 'nome-za' ? -1 : 1;
+    clientes.sort((a, b) => direcao * a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+  }
+
+  clientes.forEach((cliente) => {
       const card = document.createElement('article');
-      card.className = 'cliente-card';
+      card.className = visualizacoes.clientes === 'lista'
+        ? 'cliente-card cliente-linha'
+        : 'cliente-card';
       const nome = document.createElement('h3');
       nome.textContent = cliente.nome;
       card.append(nome);
       adicionarTexto(card, 'Telefone', formatarTelefone(cliente.telefone));
-      if (cliente.dataNascimento) adicionarTexto(card, 'Nascimento', formatarData(cliente.dataNascimento));
       adicionarTexto(card, 'Idade', `${idadeDoCliente(cliente)} anos`);
-      if (cliente.cep) adicionarTexto(card, 'CEP', formatarCep(cliente.cep));
-      if (cliente.criadoEm) adicionarTexto(card, 'Cadastro', formatarDataCadastro(cliente.criadoEm));
+      if (visualizacoes.clientes === 'cards') {
+        if (cliente.dataNascimento) adicionarTexto(card, 'Nascimento', formatarData(cliente.dataNascimento));
+        if (cliente.cep) adicionarTexto(card, 'CEP', formatarCep(cliente.cep));
+        if (cliente.criadoEm) adicionarTexto(card, 'Cadastro', formatarDataCadastro(cliente.criadoEm));
+      } else if (cliente.criadoEm) {
+        adicionarTexto(card, 'Cadastro', formatarDataCadastro(cliente.criadoEm));
+      }
       const acoes = document.createElement('div');
       acoes.className = 'acoes-card';
       const editar = document.createElement('button');
@@ -419,6 +576,7 @@ async function carregarServicos() {
   try {
     servicosCarregados = await requisitarJson('/servicos');
     renderizarServicos();
+    if (atendimentosCarregados.length) renderizarAtendimentos();
   } catch (erro) {
     renderizarServicos(erro.message || 'Não foi possível carregar os serviços.');
   }
@@ -427,9 +585,11 @@ async function carregarServicos() {
 // Filtra serviços por nome, duração, valor ou disponibilidade e apresenta o resultado.
 function renderizarServicos(erroCarregamento = '') {
   const lista = document.getElementById('lista-servicos');
+  definirVisualizacao(lista, 'servicos');
   const busca = document.getElementById('busca-servicos').value;
   const filtro = document.getElementById('filtro-servicos').value;
-  const servicos = servicosCarregados.filter((servico) => {
+  const ordem = document.getElementById('ordenar-servicos').value;
+  let servicos = servicosCarregados.filter((servico) => {
     const valores = {
       nome: servico.nome,
       duracao: `${servico.duracaoMinutos} ${formatarDuracao(servico.duracaoMinutos)}`,
@@ -457,41 +617,54 @@ function renderizarServicos(erroCarregamento = '') {
     return;
   }
 
-  servicos.forEach((servico) => {
-        const item = document.createElement('article');
-        item.className = 'servico-item';
-        const informacoes = document.createElement('div');
-        const nome = document.createElement('strong');
-        nome.textContent = servico.nome;
-        const duracao = document.createElement('p');
-        duracao.textContent = formatarDuracao(servico.duracaoMinutos);
-        const valor = document.createElement('p');
-        valor.textContent = Number.isFinite(servico.valor)
-          ? formatarValor(servico.valor)
-          : 'Valor não informado';
-        informacoes.append(nome, duracao, valor);
+  if (ordem === 'recentes' || ordem === 'antigos') {
+    servicos = ordenarPorData(servicos, 'criadoEm', ordem === 'antigos');
+  } else if (ordem === 'duracao-menor' || ordem === 'duracao-maior') {
+    const direcao = ordem === 'duracao-menor' ? 1 : -1;
+    servicos.sort((a, b) => direcao * (a.duracaoMinutos - b.duracaoMinutos));
+  } else {
+    servicos.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+  }
 
-        const botao = document.createElement('button');
-        botao.type = 'button';
-        botao.className = 'botao-oferta';
-        botao.textContent = servico.ofertado ? 'Ofertado' : 'Não ofertado';
-        botao.setAttribute('aria-pressed', String(servico.ofertado));
-        botao.addEventListener('click', () => alterarOferta(servico.id, !servico.ofertado));
-        const acoes = document.createElement('div');
-        acoes.className = 'acoes-card acoes-servico';
-        const editar = document.createElement('button');
-        editar.type = 'button';
-        editar.className = 'botao-secundario';
-        editar.textContent = 'Editar';
-        editar.addEventListener('click', () => editarServico(servico));
-        const excluir = document.createElement('button');
-        excluir.type = 'button';
-        excluir.className = 'botao-excluir';
-        excluir.textContent = 'Excluir';
-        excluir.addEventListener('click', () => excluirServico(servico));
-        acoes.append(botao, editar, excluir);
-        item.append(informacoes, acoes);
-        lista.append(item);
+  servicos.forEach((servico) => {
+    const item = document.createElement('article');
+    item.className = visualizacoes.servicos === 'lista'
+      ? 'servico-item servico-linha'
+      : 'servico-item';
+    const nome = document.createElement('h3');
+    nome.textContent = servico.nome;
+    item.append(nome);
+    adicionarTexto(item, 'Duração', formatarDuracao(servico.duracaoMinutos));
+    adicionarTexto(
+      item,
+      'Valor',
+      Number.isFinite(servico.valor) ? formatarValor(servico.valor) : 'Valor não informado'
+    );
+    if (visualizacoes.servicos === 'cards' && servico.criadoEm) {
+      adicionarTexto(item, 'Cadastro', formatarDataCadastro(servico.criadoEm));
+    }
+
+    const acoes = document.createElement('div');
+    acoes.className = 'acoes-card acoes-servico';
+    const botao = document.createElement('button');
+    botao.type = 'button';
+    botao.className = 'botao-oferta';
+    botao.textContent = servico.ofertado ? 'Ofertado' : 'Não ofertado';
+    botao.setAttribute('aria-pressed', String(servico.ofertado));
+    botao.addEventListener('click', () => alterarOferta(servico.id, !servico.ofertado));
+    const editar = document.createElement('button');
+    editar.type = 'button';
+    editar.className = 'botao-secundario';
+    editar.textContent = 'Editar';
+    editar.addEventListener('click', () => editarServico(servico));
+    const excluir = document.createElement('button');
+    excluir.type = 'button';
+    excluir.className = 'botao-excluir';
+    excluir.textContent = 'Excluir';
+    excluir.addEventListener('click', () => excluirServico(servico));
+    acoes.append(botao, editar, excluir);
+    item.append(acoes);
+    lista.append(item);
   });
 }
 
@@ -514,19 +687,29 @@ async function carregarAtendimentos() {
 // Filtra a fila por dados do cliente, serviço, data, horário ou status.
 function renderizarAtendimentos() {
   const lista = document.getElementById('lista-atendimentos');
+  definirVisualizacao(lista, 'atendimentos');
   const busca = document.getElementById('busca-atendimentos').value;
   const filtro = document.getElementById('filtro-atendimentos').value;
-  const atendimentos = atendimentosCarregados.filter((atendimento) => {
+  const ordem = document.getElementById('ordenar-atendimentos').value;
+  const statusSelecionado = document.getElementById('filtro-status-atendimentos').value;
+  const turno = document.getElementById('turno-atendimentos').value;
+  let atendimentos = atendimentosCarregados.filter((atendimento) => {
     const valores = {
       nome: atendimento.nome,
       telefone: formatarTelefone(atendimento.telefone),
       idade: atendimento.idade,
       servico: atendimento.servicoNome,
       data: `${atendimento.data} ${formatarData(atendimento.data)}`,
-      horario: atendimento.horario,
-      status: atendimento.status
+      horario: atendimento.horario
     };
-    return correspondeBusca(valores[filtro], busca);
+    const correspondeStatus = statusSelecionado === 'todos' ||
+      atendimento.status === statusSelecionado;
+    const correspondeTurno = turno === 'todos' ||
+      (turno === 'fora-turno'
+        ? !pertenceAoTurno(atendimento.horario, 'manha') &&
+          !pertenceAoTurno(atendimento.horario, 'tarde')
+        : pertenceAoTurno(atendimento.horario, turno));
+    return correspondeStatus && correspondeTurno && correspondeBusca(valores[filtro], busca);
   });
   lista.replaceChildren();
   if (atendimentos.length === 0) {
@@ -545,18 +728,46 @@ function renderizarAtendimentos() {
     concluído: 'Concluído',
     cancelado: 'Cancelado'
   };
-  atendimentos.slice()
-    .sort((a, b) => `${a.data} ${a.horario}`.localeCompare(`${b.data} ${b.horario}`))
-    .forEach((atendimento) => {
+  if (ordem === 'proximo') {
+    const prioridadeStatus = {
+      aguardando: 0,
+      'em atendimento': 1,
+      concluído: 2,
+      cancelado: 3
+    };
+    atendimentos.sort((a, b) => {
+      const prioridade = (prioridadeStatus[a.status] ?? Number.MAX_SAFE_INTEGER) -
+        (prioridadeStatus[b.status] ?? Number.MAX_SAFE_INTEGER);
+      if (prioridade !== 0) return prioridade;
+      const ordemCronologica = `${a.data} ${a.horario}`.localeCompare(`${b.data} ${b.horario}`);
+      return ordemCronologica || String(a.criadoEm || '').localeCompare(String(b.criadoEm || ''));
+    });
+  } else if (ordem === 'recentes' || ordem === 'antigos') {
+    atendimentos = ordenarPorData(atendimentos, 'criadoEm', ordem === 'antigos');
+  } else if (ordem === 'duracao-menor' || ordem === 'duracao-maior') {
+    const direcao = ordem === 'duracao-menor' ? 1 : -1;
+    atendimentos.sort((a, b) => direcao * (obterDuracaoAtendimento(a) - obterDuracaoAtendimento(b)));
+  }
+
+  atendimentos.forEach((atendimento) => {
       const card = document.createElement('article');
-      card.className = 'atendimento-card';
+      card.className = visualizacoes.atendimentos === 'lista'
+        ? 'atendimento-card atendimento-linha'
+        : 'atendimento-card';
       const nome = document.createElement('h3');
       nome.textContent = atendimento.nome;
       card.append(nome);
       adicionarTexto(card, 'Data e horário', `${formatarData(atendimento.data)} às ${atendimento.horario}`);
-      adicionarTexto(card, 'Telefone', formatarTelefone(atendimento.telefone));
-      adicionarTexto(card, 'Idade', `${atendimento.idade} anos`);
       adicionarTexto(card, 'Serviço', atendimento.servicoNome);
+      if (visualizacoes.atendimentos === 'cards') {
+        adicionarTexto(card, 'Telefone', formatarTelefone(atendimento.telefone));
+        adicionarTexto(card, 'Idade', `${atendimento.idade} anos`);
+        const duracao = obterDuracaoAtendimento(atendimento);
+        if (Number.isFinite(duracao)) adicionarTexto(card, 'Duração', formatarDuracao(duracao));
+        if (atendimento.criadoEm) {
+          adicionarTexto(card, 'Agendado em', formatarDataCadastro(atendimento.criadoEm));
+        }
+      }
 
       const status = document.createElement('span');
       status.className = 'status-atendimento';
@@ -592,6 +803,225 @@ function renderizarAtendimentos() {
       card.append(seletorStatus, acoes);
       lista.append(card);
     });
+}
+
+async function carregarHorariosTurnos() {
+    try {
+      horariosTurnos = await requisitarJson('/configuracoes/horarios');
+      document.getElementById('resumo-turnos').textContent =
+        `Manhã ${horariosTurnos.manha.inicio}–${horariosTurnos.manha.fim} · ` +
+        `Tarde ${horariosTurnos.tarde.inicio}–${horariosTurnos.tarde.fim}`;
+      renderizarAtendimentos();
+      return true;
+    } catch (erro) {
+      document.getElementById('resumo-turnos').textContent =
+        erro.message || 'Não foi possível carregar os horários dos turnos.';
+      return false;
+    }
+}
+
+async function prepararFormularioTurnos() {
+    limparMensagem(document.getElementById('mensagem-erro-turnos'));
+    if (!await carregarHorariosTurnos()) return false;
+    document.getElementById('manha-inicio').value = horariosTurnos.manha.inicio;
+    document.getElementById('manha-fim').value = horariosTurnos.manha.fim;
+    document.getElementById('tarde-inicio').value = horariosTurnos.tarde.inicio;
+    document.getElementById('tarde-fim').value = horariosTurnos.tarde.fim;
+    return true;
+}
+
+async function salvarFormularioTurnos(evento) {
+    evento.preventDefault();
+    const horarios = {
+      manha: {
+        inicio: document.getElementById('manha-inicio').value,
+        fim: document.getElementById('manha-fim').value
+      },
+      tarde: {
+        inicio: document.getElementById('tarde-inicio').value,
+        fim: document.getElementById('tarde-fim').value
+      }
+    };
+
+    try {
+      const resposta = await requisitarJson('/configuracoes/horarios', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(horarios)
+      });
+      horariosTurnos = resposta.horarios;
+      fecharModais();
+      await carregarHorariosTurnos();
+    } catch (erro) {
+      mostrarMensagem(document.getElementById('mensagem-erro-turnos'), erro.message);
+    }
+}
+
+async function carregarUsuarios() {
+    const lista = document.getElementById('lista-usuarios');
+    const mensagem = document.getElementById('mensagem-usuario');
+    lista.replaceChildren();
+    mensagem.textContent = '';
+    try {
+      usuariosCarregados = await requisitarJson('/usuarios');
+      renderizarUsuarios();
+    } catch (erro) {
+      mensagem.textContent = erro.message || 'Não foi possível carregar os usuários.';
+      mensagem.classList.add('mostrar');
+    }
+}
+
+function renderizarUsuarios() {
+    const lista = document.getElementById('lista-usuarios');
+    lista.replaceChildren();
+    const busca = document.getElementById('busca-usuarios').value.trim().toLocaleLowerCase('pt-BR');
+    const campoBusca = document.getElementById('campo-busca-usuarios').value;
+    const cargoSelecionado = document.getElementById('filtro-cargo-usuarios').value;
+    const usuariosFiltrados = usuariosCarregados.filter((usuario) => {
+      const valores = {
+        nome: usuario.nome,
+        email: usuario.email,
+        cargo: nomeCargo(usuario)
+      };
+      return (cargoSelecionado === 'todos' || usuario.papel === cargoSelecionado) &&
+        valores[campoBusca].toLocaleLowerCase('pt-BR').includes(busca);
+    });
+    if (!usuariosFiltrados.length) {
+      const vazio = document.createElement('p');
+      vazio.className = 'mensagem-lista';
+      vazio.textContent = usuariosCarregados.length
+        ? 'Nenhum usuário encontrado para os filtros selecionados.'
+        : 'Nenhum usuário cadastrado.';
+      lista.append(vazio);
+      return;
+    }
+
+    usuariosFiltrados.forEach((usuario) => {
+      const linha = document.createElement('article');
+      linha.className = 'usuario-linha';
+      const dados = document.createElement('div');
+      const nome = document.createElement('strong');
+      nome.textContent = usuario.nome;
+      const email = document.createElement('p');
+      email.textContent = usuario.email;
+      const cargo = document.createElement('span');
+      cargo.className = 'cargo-usuario';
+      cargo.textContent = nomeCargo(usuario);
+      dados.append(nome, email, cargo);
+
+      const acoes = document.createElement('div');
+      acoes.className = 'acoes-card';
+      if (!usuario.podeGerenciarUsuarios) {
+        const seletor = document.createElement('select');
+        seletor.className = 'filtro-lista';
+        seletor.setAttribute('aria-label', `Alterar cargo de ${usuario.nome}`);
+        [
+          ['usuario', 'Usuário'],
+          ['administrador', 'Administrador']
+        ].forEach(([valor, rotulo]) => {
+          const opcao = document.createElement('option');
+          opcao.value = valor;
+          opcao.textContent = rotulo;
+          seletor.append(opcao);
+        });
+        seletor.value = usuario.papel === 'administrador' ? 'administrador' : 'usuario';
+        seletor.addEventListener('change', () => alterarPapelDaTela(usuario, seletor.value));
+        acoes.append(seletor);
+      }
+      const redefinirSenha = document.createElement('button');
+      redefinirSenha.type = 'button';
+      redefinirSenha.className = 'botao-secundario';
+      redefinirSenha.textContent = 'Redefinir senha';
+      redefinirSenha.addEventListener('click', () => redefinirSenhaUsuarioDaTela(usuario));
+      acoes.append(redefinirSenha);
+      if (usuario.podeGerenciarUsuarios) {
+        const privilegiado = document.createElement('span');
+        privilegiado.className = 'texto-permissao';
+        privilegiado.textContent = 'Conta privilegiada';
+        acoes.append(privilegiado);
+      } else {
+        const excluir = document.createElement('button');
+        excluir.type = 'button';
+        excluir.className = 'botao-excluir';
+        excluir.textContent = 'Excluir';
+        excluir.addEventListener('click', () => excluirUsuarioDaTela(usuario));
+        acoes.append(excluir);
+      }
+
+      linha.append(dados, acoes);
+      lista.append(linha);
+    });
+}
+
+async function cadastrarUsuarioDaTela(evento) {
+    evento.preventDefault();
+    const formulario = document.getElementById('form-cadastro-usuario');
+    const mensagem = document.getElementById('mensagem-usuario');
+    mensagem.classList.remove('mostrar');
+    try {
+      const resposta = await requisitarJson('/usuarios', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nome: document.getElementById('nome-novo-usuario').value,
+          email: document.getElementById('email-novo-usuario').value,
+          papel: document.getElementById('papel-novo-usuario').value
+        })
+      });
+      formulario.reset();
+      await carregarUsuarios();
+      mensagem.textContent = `${resposta.mensagem} Senha temporária: ${resposta.senhaTemporaria}`;
+      mensagem.classList.add('mostrar');
+    } catch (erro) {
+      mensagem.textContent = erro.message || 'Não foi possível cadastrar o usuário.';
+      mensagem.classList.add('mostrar');
+    }
+}
+
+async function alterarPapelDaTela(usuario, papel) {
+    try {
+      await requisitarJson(`/usuarios/${encodeURIComponent(usuario.id)}/papel`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ papel })
+      });
+      await carregarUsuarios();
+    } catch (erro) {
+      window.alert(erro.message || 'Não foi possível alterar o cargo.');
+      await carregarUsuarios();
+    }
+}
+
+async function redefinirSenhaUsuarioDaTela(usuario) {
+    if (!window.confirm(
+      `Redefinir a senha de ${usuario.nome} para 12345? A pessoa deverá trocá-la no próximo acesso.`
+    )) return;
+    try {
+      const resposta = await requisitarJson(
+        `/usuarios/${encodeURIComponent(usuario.id)}/reset-senha`,
+        { method: 'POST' }
+      );
+      if (resposta.redirecionarParaTroca) {
+        window.location.replace('/html/alterar-senha.html');
+        return;
+      }
+      await carregarUsuarios();
+      const mensagem = document.getElementById('mensagem-usuario');
+      mensagem.textContent = resposta.mensagem;
+      mensagem.classList.add('mostrar');
+    } catch (erro) {
+      window.alert(erro.message || 'Não foi possível redefinir a senha.');
+    }
+}
+
+async function excluirUsuarioDaTela(usuario) {
+    if (!window.confirm(`Excluir a conta de ${usuario.nome}? Essa ação não pode ser desfeita.`)) return;
+    try {
+      await requisitarJson(`/usuarios/${encodeURIComponent(usuario.id)}`, { method: 'DELETE' });
+      await carregarUsuarios();
+    } catch (erro) {
+      window.alert(erro.message || 'Não foi possível excluir o usuário.');
+    }
 }
 
 // Sincroniza o cliente selecionado com os campos do formulário de atendimento.
@@ -921,10 +1351,6 @@ formServico.addEventListener('submit', async (evento) => {
   } catch (erro) {
     mostrarMensagem(mensagemErroServico, erro.message || 'Não foi possível cadastrar o serviço.');
   }
-});
-
-document.getElementById('voltarHome').addEventListener('click', () => {
-  void encerrarSessao();
 });
 
 carregarClientes();

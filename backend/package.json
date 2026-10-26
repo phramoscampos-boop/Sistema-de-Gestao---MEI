@@ -6,6 +6,7 @@
   "main": "src/routes/server.js",
   "scripts": {
     "start": "node src/routes/server.js",
+    "criar-proprietaria": "node src/scripts/create-owner.js",
     "test": "node --test --test-concurrency=1"
   },
   "repository": {

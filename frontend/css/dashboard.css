@@ -25,6 +25,8 @@ html, body{
     width: 20%;
     margin-top: -25px;
     padding: 30px;
+    position: sticky;
+    top: 0;
 }
 
 .elis, .la_belle{

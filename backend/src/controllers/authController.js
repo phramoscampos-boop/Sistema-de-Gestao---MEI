@@ -1,37 +1,15 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { fileURLToPath } from 'node:url';
 import bcrypt from 'bcryptjs';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const arquivoUsuarios = path.resolve(__dirname, '..', '..', 'data', 'users.json');
+import {
+  criarPerfilPublico,
+  emailValido,
+  lerUsuarios,
+  salvarUsuarios
+} from '../services/userService.js';
 const nomeCookieSessao = 'mei_session';
 const duracaoSessaoMs = 60 * 60 * 1000;
 // Sessões aleatórias ficam no servidor; o navegador recebe apenas o identificador HTTP-only.
 const sessoes = new Map();
-
-function lerUsuarios() {
-  const usuarios = JSON.parse(fs.readFileSync(arquivoUsuarios, 'utf-8'));
-  if (!Array.isArray(usuarios)) {
-    throw new Error('O arquivo de usuários deve conter uma lista.');
-  }
-  return usuarios;
-}
-
-function salvarUsuarios(usuarios) {
-  fs.writeFileSync(arquivoUsuarios, JSON.stringify(usuarios, null, 2));
-}
-
-function normalizarUsuario(usuario, indice) {
-  return {
-    id: usuario.id ?? Date.now() + indice,
-    nome: usuario.nome ?? usuario.user ?? `Usuário ${indice + 1}`,
-    email: String(usuario.email ?? usuario.user ?? '').trim().toLowerCase(),
-    senha: String(usuario.senha ?? usuario.password ?? '')
-  };
-}
 
 function obterToken(req) {
   const cookie = req.headers.cookie || '';
@@ -105,6 +83,13 @@ export function exigirAutenticacao(req, res, next) {
   return next();
 }
 
+export function exigirSenhaAtualizada(req, res, next) {
+  if (req.usuarioAutenticado?.precisaAlterarSenha) {
+    return res.status(403).json({ mensagem: 'Altere sua senha inicial para continuar.' });
+  }
+  return next();
+}
+
 // Valida a senha, migra credenciais antigas e cria uma sessão aleatória no servidor.
 export async function fazerLogin(req, res) {
   const { email, senha } = req.body || {};
@@ -113,26 +98,24 @@ export async function fazerLogin(req, res) {
   }
 
   try {
-    const usuariosOriginais = lerUsuarios();
-    const usuarios = usuariosOriginais.map(normalizarUsuario);
+    const usuarios = lerUsuarios();
     const emailDigitado = email.trim().toLowerCase();
     const indiceUsuario = usuarios.findIndex((usuario) => (
       usuario.email === emailDigitado || String(usuario.nome).toLowerCase() === emailDigitado
     ));
     const usuario = usuarios[indiceUsuario];
 
-    if (!usuario || !(await validarSenha(usuario.senha, senha))) {
+    if (!usuario || !usuario.ativo || !(await validarSenha(usuario.senha, senha))) {
       return res.status(401).json({ mensagem: 'E-mail ou senha incorretos.' });
     }
 
     if (!senhaJaFoiHashada(usuario.senha)) {
       usuario.senha = await bcrypt.hash(senha, 10);
-      usuariosOriginais[indiceUsuario] = { ...usuariosOriginais[indiceUsuario], senha: usuario.senha };
-      salvarUsuarios(usuariosOriginais);
+      salvarUsuarios(usuarios);
     }
 
     const token = randomBytes(32).toString('hex');
-    const usuarioPublico = { id: usuario.id, nome: usuario.nome, email: usuario.email };
+    const usuarioPublico = criarPerfilPublico(usuario);
     sessoes.set(token, { usuario: usuarioPublico, expiraEm: Date.now() + duracaoSessaoMs });
     definirCookieSessao(req, res, token);
     res.setHeader('Cache-Control', 'no-store');
@@ -167,13 +150,12 @@ export async function alterarSenha(req, res) {
   if (!email || !senhaAtual || !novaSenha) {
     return res.status(400).json({ mensagem: 'Preencha todos os campos.' });
   }
-  if (String(novaSenha).length < 6) {
-    return res.status(400).json({ mensagem: 'A nova senha deve ter pelo menos 6 caracteres.' });
+  if (String(novaSenha).length < 5) {
+    return res.status(400).json({ mensagem: 'A nova senha deve ter pelo menos 5 caracteres.' });
   }
 
   try {
-    const usuariosOriginais = lerUsuarios();
-    const usuarios = usuariosOriginais.map(normalizarUsuario);
+    const usuarios = lerUsuarios();
     const emailDigitado = String(email).trim().toLowerCase();
     const indiceUsuario = usuarios.findIndex((usuario) => usuario.email === emailDigitado);
     const usuario = usuarios[indiceUsuario];
@@ -183,13 +165,220 @@ export async function alterarSenha(req, res) {
     }
 
     const senhaHash = await bcrypt.hash(String(novaSenha), 10);
-    usuariosOriginais[indiceUsuario] = {
-      ...usuariosOriginais[indiceUsuario],
-      senha: senhaHash
-    };
-    salvarUsuarios(usuariosOriginais);
-    return res.json({ mensagem: 'Senha alterada com sucesso.' });
+    usuario.senha = senhaHash;
+    usuario.precisaAlterarSenha = false;
+    salvarUsuarios(usuarios);
+    for (const sessao of sessoes.values()) {
+      if (String(sessao.usuario.id) === String(usuario.id)) {
+        sessao.usuario = criarPerfilPublico(usuario);
+      }
+    }
+    const sessaoAtual = obterSessao(req);
+    const podeIrParaDashboard = sessaoAtual &&
+      String(sessaoAtual.sessao.usuario.id) === String(usuario.id);
+    return res.json({
+      mensagem: 'Senha alterada com sucesso.',
+      irParaDashboard: Boolean(podeIrParaDashboard)
+    });
   } catch (erro) {
     return responderErro(res, 'Não foi possível salvar a nova senha', erro);
   }
+}
+
+export async function alterarEmail(req, res) {
+  const novoEmail = typeof req.body?.novoEmail === 'string'
+    ? req.body.novoEmail.trim().toLowerCase()
+    : '';
+  const senhaAtual = req.body?.senhaAtual;
+  if (!emailValido(novoEmail) || typeof senhaAtual !== 'string' || !senhaAtual) {
+    return res.status(400).json({ mensagem: 'Informe um novo e-mail válido e sua senha atual.' });
+  }
+
+  try {
+    const usuarios = lerUsuarios();
+    const usuario = usuarios.find(
+      (item) => String(item.id) === String(req.usuarioAutenticado.id)
+    );
+    if (!usuario || !usuario.ativo || !(await validarSenha(usuario.senha, senhaAtual))) {
+      return res.status(401).json({ mensagem: 'Sua senha atual está incorreta.' });
+    }
+    if (usuarios.some((item) => String(item.id) !== String(usuario.id) && item.email === novoEmail)) {
+      return res.status(409).json({ mensagem: 'Já existe uma conta com esse e-mail.' });
+    }
+
+    usuario.email = novoEmail;
+    salvarUsuarios(usuarios);
+    const usuarioPublico = criarPerfilPublico(usuario);
+    for (const sessao of sessoes.values()) {
+      if (String(sessao.usuario.id) === String(usuario.id)) {
+        sessao.usuario = usuarioPublico;
+      }
+    }
+    return res.json({ mensagem: 'E-mail alterado com sucesso.', usuario: usuarioPublico });
+  } catch (erro) {
+    return responderErro(res, 'Não foi possível alterar o e-mail', erro);
+  }
+}
+
+export function exigirGestaoUsuarios(req, res, next) {
+  if (!req.usuarioAutenticado?.podeGerenciarUsuarios) {
+    return res.status(403).json({ mensagem: 'Você não tem permissão para gerenciar usuários.' });
+  }
+  return next();
+}
+
+export function listarUsuarios(req, res) {
+  try {
+    return res.json(lerUsuarios().map(criarPerfilPublico));
+  } catch (erro) {
+    return responderErro(res, 'Não foi possível carregar os usuários', erro);
+  }
+}
+
+export async function cadastrarUsuario(req, res) {
+  const nome = typeof req.body?.nome === 'string' ? req.body.nome.trim().replace(/\s+/g, ' ') : '';
+  const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+  const papel = req.body?.papel || 'usuario';
+  if (nome.length < 2 || !emailValido(email) ||
+      !['usuario', 'administrador'].includes(papel)) {
+    return res.status(400).json({ mensagem: 'Informe nome, e-mail válido e um cargo permitido.' });
+  }
+
+  try {
+    const usuarios = lerUsuarios();
+    if (usuarios.some((usuario) => usuario.email === email)) {
+      return res.status(409).json({ mensagem: 'Já existe uma conta com esse e-mail.' });
+    }
+
+    const usuario = {
+      id: randomBytes(16).toString('hex'),
+      nome,
+      email,
+      senha: await bcrypt.hash('12345', 10),
+      papel,
+      podeGerenciarUsuarios: false,
+      precisaAlterarSenha: true,
+      ativo: true,
+      criadoEm: new Date().toISOString()
+    };
+    usuarios.push(usuario);
+    salvarUsuarios(usuarios);
+    return res.status(201).json({
+      mensagem: 'Usuário cadastrado com a senha padrão. A troca será exigida no primeiro acesso.',
+      usuario: criarPerfilPublico(usuario),
+      senhaTemporaria: '12345'
+    });
+  } catch (erro) {
+    return responderErro(res, 'Não foi possível cadastrar o usuário', erro);
+  }
+}
+
+export function alterarPapelUsuario(req, res) {
+  const { papel } = req.body || {};
+  if (!['usuario', 'administrador'].includes(papel)) {
+    return res.status(400).json({ mensagem: 'Selecione um cargo válido.' });
+  }
+
+  try {
+    const usuarios = lerUsuarios();
+    const usuario = usuarios.find((item) => String(item.id) === req.params.id);
+    if (!usuario) {
+      return res.status(404).json({ mensagem: 'Usuário não encontrado.' });
+    }
+    if (usuario.podeGerenciarUsuarios) {
+      return res.status(403).json({ mensagem: 'O cargo das contas privilegiadas não pode ser alterado.' });
+    }
+
+    usuario.papel = papel;
+    salvarUsuarios(usuarios);
+    for (const sessao of sessoes.values()) {
+      if (String(sessao.usuario.id) === String(usuario.id)) {
+        sessao.usuario = criarPerfilPublico(usuario);
+      }
+    }
+    return res.json({ mensagem: 'Cargo atualizado.', usuario: criarPerfilPublico(usuario) });
+  } catch (erro) {
+    return responderErro(res, 'Não foi possível atualizar o cargo', erro);
+  }
+}
+
+export async function resetarSenhaUsuario(req, res) {
+  try {
+    const usuarios = lerUsuarios();
+    const usuario = usuarios.find((item) => String(item.id) === req.params.id);
+    if (!usuario) {
+      return res.status(404).json({ mensagem: 'Usuário não encontrado.' });
+    }
+
+    usuario.senha = await bcrypt.hash('12345', 10);
+    usuario.precisaAlterarSenha = true;
+    salvarUsuarios(usuarios);
+    for (const sessao of sessoes.values()) {
+      if (String(sessao.usuario.id) === String(usuario.id)) {
+        sessao.usuario = criarPerfilPublico(usuario);
+      }
+    }
+    return res.json({
+      mensagem: `Senha de ${usuario.nome} redefinida para 12345. A troca será exigida no próximo acesso.`,
+      usuario: criarPerfilPublico(usuario),
+      redirecionarParaTroca: String(usuario.id) === String(req.usuarioAutenticado.id)
+    });
+  } catch (erro) {
+    return responderErro(res, 'Não foi possível redefinir a senha', erro);
+  }
+}
+
+export function excluirUsuario(req, res) {
+  try {
+    const usuarios = lerUsuarios();
+    const indice = usuarios.findIndex((item) => String(item.id) === req.params.id);
+    if (indice === -1) {
+      return res.status(404).json({ mensagem: 'Usuário não encontrado.' });
+    }
+    const usuario = usuarios[indice];
+    if (usuario.podeGerenciarUsuarios ||
+        String(usuario.id) === String(req.usuarioAutenticado.id)) {
+      return res.status(403).json({ mensagem: 'As contas privilegiadas não podem ser removidas.' });
+    }
+
+    usuarios.splice(indice, 1);
+    salvarUsuarios(usuarios);
+    for (const [token, sessao] of sessoes) {
+      if (String(sessao.usuario.id) === String(usuario.id)) sessoes.delete(token);
+    }
+    return res.json({ mensagem: 'Usuário excluído.' });
+  } catch (erro) {
+    return responderErro(res, 'Não foi possível excluir o usuário', erro);
+  }
+}
+
+export async function criarProprietariaInicial(nome, email) {
+  const nomeNormalizado = String(nome || '').trim().replace(/\s+/g, ' ');
+  const emailNormalizado = String(email || '').trim().toLowerCase();
+  if (nomeNormalizado.length < 2 || !emailValido(emailNormalizado)) {
+    throw new Error('Informe um nome e um e-mail válidos para a proprietária.');
+  }
+
+  const usuarios = lerUsuarios({ migrarLegados: true });
+  if (usuarios.some((usuario) => usuario.papel === 'proprietaria')) {
+    throw new Error('Já existe uma conta proprietária.');
+  }
+  if (usuarios.some((usuario) => usuario.email === emailNormalizado)) {
+    throw new Error('Já existe uma conta com esse e-mail.');
+  }
+
+  const usuario = {
+    id: randomBytes(16).toString('hex'),
+    nome: nomeNormalizado,
+    email: emailNormalizado,
+    senha: await bcrypt.hash('12345', 10),
+    papel: 'proprietaria',
+    podeGerenciarUsuarios: true,
+    precisaAlterarSenha: true,
+    ativo: true,
+    criadoEm: new Date().toISOString()
+  };
+  usuarios.push(usuario);
+  salvarUsuarios(usuarios);
+  return { usuario: criarPerfilPublico(usuario), senhaTemporaria: '12345' };
 }

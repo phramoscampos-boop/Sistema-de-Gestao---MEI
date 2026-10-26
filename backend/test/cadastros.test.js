@@ -8,6 +8,7 @@ const arquivoClientes = new URL('../data/clientes.json', import.meta.url);
 const arquivoServicos = new URL('../data/servicos.json', import.meta.url);
 const arquivoAtendimentos = new URL('../data/atendimentos.json', import.meta.url);
 const arquivoUsuarios = new URL('../data/users.json', import.meta.url);
+const arquivoConfiguracoes = new URL('../data/configuracoes.json', import.meta.url);
 let cookieSessao = '';
 const fetch = (url, opcoes = {}) => globalThis.fetch(url, {
   ...opcoes,
@@ -22,6 +23,7 @@ test('cadastra serviços e clientes, e atualiza a oferta do serviço', async () 
   const backupServicos = fs.readFileSync(arquivoServicos, 'utf-8');
   const backupAtendimentos = fs.readFileSync(arquivoAtendimentos, 'utf-8');
   const backupUsuarios = fs.readFileSync(arquivoUsuarios, 'utf-8');
+  const backupConfiguracoes = fs.readFileSync(arquivoConfiguracoes, 'utf-8');
   const quantidadeClientesInicial = JSON.parse(backupClientes).length;
   const servidor = app.listen(0);
   await new Promise((resolve) => servidor.once('listening', resolve));
@@ -42,6 +44,37 @@ test('cadastra serviços e clientes, e atualiza a oferta do serviço', async () 
     assert.equal(respostaLogin.status, 200);
     cookieSessao = respostaLogin.headers.get('set-cookie').split(';', 1)[0];
 
+    const respostaHorarios = await fetch(`${baseUrl}/configuracoes/horarios`);
+    assert.equal(respostaHorarios.status, 200);
+    assert.deepEqual(await respostaHorarios.json(), {
+      manha: { inicio: '08:00', fim: '12:00' },
+      tarde: { inicio: '13:00', fim: '19:00' }
+    });
+
+    const respostaSalvarHorarios = await fetch(`${baseUrl}/configuracoes/horarios`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        manha: { inicio: '08:00', fim: '12:00' },
+        tarde: { inicio: '13:00', fim: '22:30' }
+      })
+    });
+    assert.equal(respostaSalvarHorarios.status, 200);
+    assert.deepEqual((await respostaSalvarHorarios.json()).horarios, {
+      manha: { inicio: '08:00', fim: '12:00' },
+      tarde: { inicio: '13:00', fim: '22:30' }
+    });
+
+    const respostaTurnosSobrepostos = await fetch(`${baseUrl}/configuracoes/horarios`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        manha: { inicio: '08:00', fim: '14:00' },
+        tarde: { inicio: '13:00', fim: '20:00' }
+      })
+    });
+    assert.equal(respostaTurnosSobrepostos.status, 400);
+
     const respostaServico = await fetch(`${baseUrl}/servicos`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -51,6 +84,7 @@ test('cadastra serviços e clientes, e atualiza a oferta do serviço', async () 
     const { servico } = await respostaServico.json();
     assert.equal(servico.ofertado, true);
     assert.equal(servico.valor, 75.5);
+    assert.ok(servico.criadoEm);
 
     const respostaServicoSemValor = await fetch(`${baseUrl}/servicos`, {
       method: 'POST',
@@ -283,12 +317,24 @@ test('cadastra serviços e clientes, e atualiza a oferta do serviço', async () 
     assert.equal(respostaAtendimentoMaisTarde.status, 201);
     const atendimentoMaisTarde = (await respostaAtendimentoMaisTarde.json()).atendimento;
 
+    const respostaForaDoTurno = await enviarAtendimento({
+      nome: 'Joana Silva',
+      telefone: '98765432',
+      idade: 31,
+      data: dataSeguinteMarcada,
+      horario: '22:45',
+      servicoId: servico.id
+    });
+    assert.equal(respostaForaDoTurno.status, 201);
+    const atendimentoForaDoTurno = (await respostaForaDoTurno.json()).atendimento;
+
     const respostaListaAtendimentos = await fetch(`${baseUrl}/atendimentos`);
     const atendimentos = await respostaListaAtendimentos.json();
     assert.deepEqual(atendimentos.map((item) => item.id), [
       atendimentoExistente.id,
       atendimentoNovo.id,
-      atendimentoMaisTarde.id
+      atendimentoMaisTarde.id,
+      atendimentoForaDoTurno.id
     ]);
 
     const respostaStatusInvalido = await fetch(`${baseUrl}/atendimentos/${atendimentoNovo.id}/status`, {
@@ -335,7 +381,12 @@ test('cadastra serviços e clientes, e atualiza a oferta do serviço', async () 
     assert.equal(respostaEdicaoAtendimento.status, 200);
     assert.equal((await respostaEdicaoAtendimento.json()).atendimento.idade, 29);
 
-    for (const atendimento of [atendimentoExistente, atendimentoNovo, atendimentoMaisTarde]) {
+    for (const atendimento of [
+      atendimentoExistente,
+      atendimentoNovo,
+      atendimentoMaisTarde,
+      atendimentoForaDoTurno
+    ]) {
       const respostaRemocaoAtendimento = await fetch(`${baseUrl}/atendimentos/${atendimento.id}`, {
         method: 'DELETE'
       });
@@ -357,6 +408,7 @@ test('cadastra serviços e clientes, e atualiza a oferta do serviço', async () 
     fs.writeFileSync(arquivoServicos, backupServicos);
     fs.writeFileSync(arquivoAtendimentos, backupAtendimentos);
     fs.writeFileSync(arquivoUsuarios, backupUsuarios);
+    fs.writeFileSync(arquivoConfiguracoes, backupConfiguracoes);
     await new Promise((resolve, reject) => {
       servidor.close((erro) => (erro ? reject(erro) : resolve()));
     });

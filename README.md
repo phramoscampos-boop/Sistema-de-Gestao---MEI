@@ -9,15 +9,20 @@ backend/
   data/                       # Coleções JSON persistidas pelo servidor
   src/
     controllers/
-      authController.js       # Hash de senhas, sessões, login e logout
+      authController.js       # Autenticação, sessões e gestão de contas
+      settingsController.js   # Configuração persistida dos turnos
     routes/
       server.js               # Inicializa o Express e registra rotas e arquivos estáticos
-  test/                       # Testes de API e autenticação
+    scripts/
+      create-owner.js         # Provisionamento local da conta proprietária
+    services/
+      userService.js          # Leitura, normalização e persistência de usuários
+  test/                       # Testes sequenciais de API e autenticação
 frontend/
   assets/images/              # Marca, ícones e imagens
   css/                        # Estilos das telas e módulos
   html/                       # Login, troca de senha e dashboard
-  javascript/                 # Autenticação e comportamento dos módulos
+  javascript/                 # Autenticação, CRUD e controles do dashboard
 ```
 
 O servidor resolve os arquivos de dados a partir da raiz de `backend/` e os arquivos estáticos a partir da raiz do projeto. Assim, a localização de `src/routes/server.js` não altera esses caminhos.
@@ -39,6 +44,14 @@ npm test
 
 Os testes são sequenciais porque usam temporariamente as coleções JSON compartilhadas e restauram os arquivos ao terminar.
 
+Na primeira instalação, crie a conta proprietária localmente com:
+
+```sh
+npm run criar-proprietaria -- Elisângela elis@empresa.com
+```
+
+O comando cria a conta com a senha inicial `12345` e exige a troca no primeiro acesso. Ele falha se já houver uma proprietária ou se o e-mail estiver em uso. Não há cadastro público de usuários.
+
 ## Autenticação e hash de senha
 
 O `bcryptjs` implementa o algoritmo bcrypt. `bcrypt.hash(senha, 10)` gera um salt aleatório e um hash de custo 10; o salt e o custo ficam incorporados no resultado. A senha original não pode ser recuperada do hash. Para autenticar, `bcrypt.compare(senhaInformada, hashArmazenado)` recalcula e compara o valor com segurança.
@@ -47,19 +60,27 @@ Senhas antigas em texto simples continuam aceitas apenas para permitir a migraç
 
 O servidor mantém a sessão em memória e entrega ao navegador um cookie `HttpOnly` e `SameSite=Strict`, que não pode ser lido por JavaScript. As rotas de dados e a página da dashboard exigem esse cookie. A atividade reinicia o prazo deslizante de uma hora; sem atividade, a interface encerra a sessão e o servidor rejeita acessos posteriores. Reiniciar o servidor encerra as sessões existentes.
 
+O comando inicial migra as contas antigas sem cargo como administradores privilegiados. A proprietária e essas contas podem cadastrar usuários, promover ou rebaixar contas comuns e excluí-las; contas privilegiadas não podem ser excluídas pelo painel. Administradores e usuários criados depois não recebem automaticamente permissão para gerenciar contas. Novas contas usam a senha padrão `12345`, exigem troca no primeiro acesso e não podem acessar os dados antes dessa troca.
+
+O perfil indica se a conta é Proprietária, Administrador privilegiado, Administrador ou Usuário. Novas contas começam com a senha `12345`; contas privilegiadas podem redefinir a senha de qualquer conta (inclusive outra conta privilegiada), retornando a `12345` e exigindo troca no próximo acesso. Essa senha padrão é fraca e deve ser substituída imediatamente. Cada usuário pode alterar o próprio e-mail no menu de perfil, confirmando a senha atual; endereços já usados por outra conta não são aceitos.
+
 ## Módulos
 
 - **Clientes:** nome, telefone, data de nascimento, idade calculada, CEP e data de cadastro. O ano da data de nascimento deve ter quatro dígitos. A seleção de serviços não faz parte do cadastro do cliente.
 - **Serviços:** nome, duração, valor e situação de oferta.
 - **Fila de atendimento:** cliente, serviço, data, horário e status. A seleção de serviço ocorre neste módulo.
 
-Cada módulo tem pesquisa e seletor de atributo. A busca ignora diferenças de acentuação e maiúsculas/minúsculas.
+Cada módulo tem pesquisa e seletor de atributo. A busca ignora diferenças de acentuação e maiúsculas/minúsculas. Clientes, serviços e fila abrem em lista, com alternância para cards completos. A fila permite filtrar diretamente por status e turno. Usuários podem ser pesquisados por nome, e-mail ou cargo e filtrados pelo cargo.
+
+Os turnos começam como manhã (08:00–12:00) e tarde (13:00–19:00). Contas privilegiadas podem alterar as faixas no módulo da fila; elas servem para filtrar e organizar a visualização, não restringem os horários que podem ser agendados.
 
 ## Responsabilidades do código
 
 ### Backend
 
 - `backend/src/routes/server.js` resolve os caminhos dos dados e do frontend em relação à raiz do backend, inicia o Express e registra as rotas.
+- `backend/src/services/userService.js` normaliza contas antigas, persiste usuários e remove credenciais do perfil retornado à interface.
+- `backend/src/controllers/settingsController.js` valida e persiste as faixas dos turnos em `backend/data/configuracoes.json`.
 - `lerRegistros` e `salvarRegistros` leem e persistem cada coleção JSON; arquivos inválidos geram erro explícito.
 - `validarNomeCliente`, `validarTelefoneCliente`, `validarIdade` e `validarCep` normalizam e validam os dados antes de gravá-los.
 - `calcularIdade` valida a data de nascimento no formato ISO com ano de quatro dígitos e calcula a idade. `validarDataAtendimento` rejeita datas e horários inválidos ou passados.
@@ -71,6 +92,6 @@ Cada módulo tem pesquisa e seletor de atributo. A busca ignora diferenças de a
 - `frontend/javascript/login.js` valida e envia as credenciais ao servidor; não armazena senhas no navegador.
 - `frontend/javascript/auth.js` consulta a sessão do servidor e solicita logout.
 - `frontend/javascript/dashboard_script.js` valida a sessão antes de iniciar a tela, controla inatividade e coordena os formulários e módulos.
-- `carregarClientes`, `carregarServicos` e `carregarAtendimentos` obtêm os dados da API; `renderizarClientes`, `renderizarServicos` e `renderizarAtendimentos` aplicam o filtro selecionado e constroem os cartões.
+- `carregarClientes`, `carregarServicos` e `carregarAtendimentos` obtêm os dados da API; `renderizarClientes`, `renderizarServicos` e `renderizarAtendimentos` aplicam pesquisa, ordenação e visualização em lista/cards.
 - `normalizarBusca` e `correspondeBusca` preparam os textos e comparam os termos sem diferenciar acentos ou maiúsculas. `calcularIdade` valida a data e calcula a idade exibida.
 - Os helpers `atualizarSelecaoClienteAtendimento`, `atualizarCamposClienteAtendimento` e `preencherServicosAtendimento` conectam o cadastro de clientes e o catálogo ao formulário da fila; somente serviços ofertados podem ser selecionados.

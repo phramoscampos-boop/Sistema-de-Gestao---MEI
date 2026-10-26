@@ -19,5 +19,125 @@
     "duracaoMinutos": 240,
     "valor": 120,
     "ofertado": true
+  },
+  {
+    "id": "a2ff1d19-8adc-4a21-8706-70ab2b2b8bff",
+    "nome": "Serviço Teste 01",
+    "duracaoMinutos": 30,
+    "valor": 50,
+    "ofertado": true,
+    "criadoEm": "2026-10-26T16:01:40.230Z"
+  },
+  {
+    "id": "f1263e7e-4b9d-4c3e-9ce2-c0cf48745d7d",
+    "nome": "Serviço Teste 02",
+    "duracaoMinutos": 45,
+    "valor": 55,
+    "ofertado": true,
+    "criadoEm": "2026-10-26T16:01:40.241Z"
+  },
+  {
+    "id": "4a6c35a8-5bf6-45bb-a7da-8d9acbaa05c3",
+    "nome": "Serviço Teste 03",
+    "duracaoMinutos": 60,
+    "valor": 60,
+    "ofertado": true,
+    "criadoEm": "2026-10-26T16:01:40.246Z"
+  },
+  {
+    "id": "d5b522d8-903a-44c1-829e-c8e0b951513e",
+    "nome": "Serviço Teste 04",
+    "duracaoMinutos": 75,
+    "valor": 65,
+    "ofertado": true,
+    "criadoEm": "2026-10-26T16:01:40.249Z"
+  },
+  {
+    "id": "bc30fca3-b724-4009-ab5d-ec4d6c3cf70c",
+    "nome": "Serviço Teste 05",
+    "duracaoMinutos": 90,
+    "valor": 70,
+    "ofertado": true,
+    "criadoEm": "2026-10-26T16:01:40.254Z"
+  },
+  {
+    "id": "07071d32-652f-41b7-82dc-04f58cf3c1ee",
+    "nome": "Serviço Teste 06",
+    "duracaoMinutos": 30,
+    "valor": 75,
+    "ofertado": true,
+    "criadoEm": "2026-10-26T16:01:40.260Z"
+  },
+  {
+    "id": "4adf1adb-4e1b-4f93-9bc2-6d96c653f0bd",
+    "nome": "Serviço Teste 07",
+    "duracaoMinutos": 45,
+    "valor": 80,
+    "ofertado": true,
+    "criadoEm": "2026-10-26T16:01:40.263Z"
+  },
+  {
+    "id": "f61eec5c-c3b6-4b81-9a19-6875e2e6e7c3",
+    "nome": "Serviço Teste 08",
+    "duracaoMinutos": 60,
+    "valor": 85,
+    "ofertado": true,
+    "criadoEm": "2026-10-26T16:01:40.265Z"
+  },
+  {
+    "id": "2f66222f-e865-449a-bdf1-82fb0fddddd0",
+    "nome": "Serviço Teste 09",
+    "duracaoMinutos": 75,
+    "valor": 90,
+    "ofertado": true,
+    "criadoEm": "2026-10-26T16:01:40.268Z"
+  },
+  {
+    "id": "75712028-09a7-4c4b-a7d5-7a36859e5df3",
+    "nome": "Serviço Teste 10",
+    "duracaoMinutos": 90,
+    "valor": 95,
+    "ofertado": true,
+    "criadoEm": "2026-10-26T16:01:40.272Z"
+  },
+  {
+    "id": "1d7d18c1-936c-4cee-9652-9c06b9bc17e1",
+    "nome": "Serviço Teste 11",
+    "duracaoMinutos": 30,
+    "valor": 100,
+    "ofertado": true,
+    "criadoEm": "2026-10-26T16:01:40.278Z"
+  },
+  {
+    "id": "d99adf3f-2359-477a-803c-26b4901dc8ce",
+    "nome": "Serviço Teste 12",
+    "duracaoMinutos": 45,
+    "valor": 105,
+    "ofertado": true,
+    "criadoEm": "2026-10-26T16:01:40.280Z"
+  },
+  {
+    "id": "7438e716-722f-4792-acc9-b2e7370b75ed",
+    "nome": "Serviço Teste 13",
+    "duracaoMinutos": 60,
+    "valor": 110,
+    "ofertado": true,
+    "criadoEm": "2026-10-26T16:01:40.282Z"
+  },
+  {
+    "id": "ffb37534-e077-4e43-b0c1-f3ef76e5c582",
+    "nome": "Serviço Teste 14",
+    "duracaoMinutos": 75,
+    "valor": 115,
+    "ofertado": true,
+    "criadoEm": "2026-10-26T16:01:40.290Z"
+  },
+  {
+    "id": "c8d837c3-aafd-4596-a02b-d949bbf23fdf",
+    "nome": "Serviço Teste 15",
+    "duracaoMinutos": 90,
+    "valor": 120,
+    "ofertado": true,
+    "criadoEm": "2026-10-26T16:01:40.292Z"
   }
 ]

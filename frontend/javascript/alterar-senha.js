@@ -5,6 +5,17 @@ const novaSenhaInput = document.getElementById('nova-senha');
 const confirmarNovaSenhaInput = document.getElementById('confirmar-nova-senha');
 const mensagemErro = document.getElementById('mensagem-erro');
 const mensagemSucesso = document.getElementById('mensagem-sucesso');
+let redirecionarPainelAposTroca = false;
+
+fetch('/auth/session', { cache: 'no-store' })
+  .then(async (resposta) => {
+    if (!resposta.ok) return;
+    const usuario = (await resposta.json()).usuario;
+    emailInput.value = usuario.email;
+    emailInput.readOnly = true;
+    redirecionarPainelAposTroca = true;
+  })
+  .catch((erro) => console.error('Não foi possível verificar a sessão atual:', erro));
 
 function limparMensagens() {
   mensagemErro.textContent = '';
@@ -28,8 +39,8 @@ formulario.addEventListener('submit', async (evento) => {
     return;
   }
 
-  if (novaSenhaInput.value.length < 6) {
-    mostrarErro('A nova senha deve ter pelo menos 6 caracteres.');
+  if (novaSenhaInput.value.length < 5) {
+    mostrarErro('A nova senha deve ter pelo menos 5 caracteres.');
     return;
   }
 
@@ -58,6 +69,9 @@ formulario.addEventListener('submit', async (evento) => {
     formulario.reset();
     mensagemSucesso.textContent = dadosResposta.mensagem;
     mensagemSucesso.classList.add('mostrar');
+    if (redirecionarPainelAposTroca && dadosResposta.irParaDashboard) {
+      window.location.replace('/dashboard.html');
+    }
   } catch (erro) {
     mostrarErro(erro.message || 'Não foi possível alterar a senha.');
   }

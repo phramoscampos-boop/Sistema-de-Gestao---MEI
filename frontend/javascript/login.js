@@ -60,7 +60,9 @@ async function fazerLogin() {
     }
 
     limparFormulario();
-    window.location.replace('/dashboard.html');
+    window.location.replace(dadosResposta.usuario?.precisaAlterarSenha
+      ? '/html/alterar-senha.html'
+      : '/dashboard.html');
   } catch (erro) {
     mostrarErro(erro.message || 'Não foi possível fazer login.');
   }

@@ -17,57 +17,66 @@
     <main>
 
       <div class="home_page">
-        <div class="side_bar"> <!--side bar-->
-          <!-- O clique desta seta é configurado no arquivo dashboard_script.js. -->
-          <img class="voltarHome-class" id="voltarHome" src="../assets/images/arrow-voltar-home.svg" alt="Voltar para a página inicial.">
-          <h2 class="voltarHome-text">Voltar para a página inicial</h2>
-          <h1 class="elis">Elis</h1>
-          <h1 class="la_belle">la Belle</h1>
-        </div>
-
-      <div class="profile_container"> 
-        
-        <div class="profile" id="profile">
-          <img class="profile_img" id="open_profile" src="../assets/images/profile_img.svg">
-          <span class="profile_arrow">
-            <img class = "profile_arrow_img" src="../assets/images/arrow_profile.svg" alt="Seta de mais informações sobre perfil.">
-            <!--Troquei a setinha v pra uma imagem de setinha, depois vc aumenta o tamanho no css-->
-          </span> <!-- Troquei o h1 por um span -->
-        </div>
-        
-                  <!--Tela de perfil-->
-        <div id="modalProfile" class="profile_info">
-          <h1>Meu Perfil</h1>
-
-          <div class="profile_data">
-            <label>Nome</label>
-            <p id="nome-usuario-dashboard">Elis</p>
-          </div>
-
-          <div class="profile_data">
-            <label>E-mail</label>
-            <p id="email-usuario-dashboard">elislabelle@email.com</p>
-          </div>
-
-          <div class="profile_data">
-            <label>Telefone</label>
-            <p>+55 (77)0000-0000</p>
-          </div>
-
-          <button type="button" id="botao-sair" class="botao-sair">Sair</button>
-        </div>
-        
-      </div> 
+        <aside class="side_bar">
+          <a class="marca-sidebar" href="/dashboard.html" aria-label="Elis la Belle, painel principal">
+            <img src="../assets/images/logo-mei-v2.svg" alt="">
+            <span>Elis la Belle</span>
+          </a>
+          <nav class="abas-dashboard" aria-label="Navegação principal">
+            <button type="button" class="aba-dashboard ativa" id="aba-clientes" aria-controls="painel-clientes" aria-selected="true">
+              <span aria-hidden="true">♙</span> Clientes
+            </button>
+            <button type="button" class="aba-dashboard" id="aba-servicos" aria-controls="painel-servicos" aria-selected="false">
+              <span aria-hidden="true">✂</span> Serviços
+            </button>
+            <button type="button" class="aba-dashboard" id="aba-atendimentos" aria-controls="painel-atendimentos" aria-selected="false">
+              <span aria-hidden="true">▦</span> Fila de atendimento
+            </button>
+            <button type="button" class="aba-dashboard" id="aba-usuarios" aria-controls="painel-usuarios" aria-selected="false" hidden>
+              <span aria-hidden="true">♧</span> Usuários
+            </button>
+          </nav>
+        </aside>
 
         <div class="dashboard-main">
           <header class="barra-navegacao">
-            <nav class="abas-dashboard" aria-label="Navegação principal">
-              <button type="button" class="aba-dashboard ativa" id="aba-clientes" aria-controls="painel-clientes" aria-selected="true">Clientes</button>
-              <button type="button" class="aba-dashboard" id="aba-servicos" aria-controls="painel-servicos" aria-selected="false">Serviços</button>
-              <button type="button" class="aba-dashboard" id="aba-atendimentos" aria-controls="painel-atendimentos" aria-selected="false">Fila de Atendimento</button>
-            </nav>
-            <div class="logo-topo">
-              <img src="../assets/images/logo-mei-v2.svg" alt="Logo do Sistema de Gestão MEI">
+            <div class="titulo-topo">
+              <p>Elis la Belle - Painel Geral</p>
+            </div>
+            <p class="saudacao-topo" id="saudacao-usuario" aria-live="polite"></p>
+            <div class="profile_container">
+              <button class="profile" id="profile" type="button" aria-expanded="false" aria-controls="modalProfile">
+                <span class="cargo-perfil" id="cargo-perfil"></span>
+                <img class="profile_img" id="open_profile" src="../assets/images/profile_img.svg" alt="">
+                <span class="profile_arrow" aria-hidden="true">
+                  <img class="profile_arrow_img" src="../assets/images/arrow_profile.svg" alt="">
+                </span>
+              </button>
+              <div id="modalProfile" class="profile_info" hidden>
+                <h2>Meu perfil</h2>
+                <div class="profile_data">
+                  <label>Nome</label>
+                  <p id="nome-usuario-dashboard"></p>
+                </div>
+                <div class="profile_data">
+                  <label>Cargo</label>
+                  <p id="cargo-usuario-dashboard"></p>
+                </div>
+                <div class="profile_data">
+                  <label>E-mail</label>
+                  <p id="email-usuario-dashboard"></p>
+                </div>
+                <button type="button" id="abrir-alteracao-email" class="botao-secundario">Alterar e-mail</button>
+                <form id="form-alterar-email" class="form-alterar-email" hidden>
+                  <label for="novo-email-perfil">Novo e-mail</label>
+                  <input id="novo-email-perfil" type="email" required autocomplete="email">
+                  <label for="senha-email-perfil">Confirme sua senha</label>
+                  <input id="senha-email-perfil" type="password" required autocomplete="current-password">
+                  <p id="mensagem-email-perfil" class="mensagem-dashboard" role="status"></p>
+                  <button class="botao-primario" type="submit">Salvar e-mail</button>
+                </form>
+                <button type="button" id="botao-sair" class="botao-sair">Sair</button>
+              </div>
             </div>
           </header>
 
@@ -77,10 +86,7 @@
                 <h2 id="titulo-clientes">Clientes</h2>
                 <p>Gerencie os dados e contatos dos seus clientes.</p>
               </div>
-              <div class="acoes-cabecalho">
-                <button class="botao-secundario" id="listar-servicos" type="button">Listar Serviços</button>
-                <button class="botao-primario" id="abrir_CadastroCliente" type="button">+ Cadastrar cliente</button>
-              </div>
+              <button class="botao-primario" id="abrir_CadastroCliente" type="button">+ Cadastrar cliente</button>
             </div>
             <div class="barra-filtro-modulo">
               <label class="sr-only" for="busca-clientes">Pesquisar clientes</label>
@@ -96,7 +102,20 @@
                 <option value="cep">CEP</option>
               </select>
             </div>
-            <div id="lista-clientes" class="lista-clientes" aria-live="polite"></div>
+            <div class="controles-lista">
+              <label for="ordenar-clientes">Ordenar por</label>
+              <select class="filtro-lista" id="ordenar-clientes">
+                <option value="recentes">Mais recentes</option>
+                <option value="antigos">Menos recentes</option>
+                <option value="nome-az">Nome (A–Z)</option>
+                <option value="nome-za">Nome (Z–A)</option>
+              </select>
+              <div class="alternador-visualizacao" role="group" aria-label="Visualização de clientes">
+                <button type="button" class="botao-visualizacao ativo" data-modulo="clientes" data-visualizacao="lista" aria-pressed="true">Lista</button>
+                <button type="button" class="botao-visualizacao" data-modulo="clientes" data-visualizacao="cards" aria-pressed="false">Cards</button>
+              </div>
+            </div>
+            <div id="lista-clientes" class="lista-clientes visualizacao-lista" aria-live="polite"></div>
           </section>
 
           <section class="dashboard_busca painel-lista" id="painel-servicos" aria-labelledby="titulo-servicos" hidden>
@@ -119,7 +138,21 @@
                 <option value="oferta">Disponibilidade</option>
               </select>
             </div>
-            <div id="lista-servicos" class="lista-servicos" aria-live="polite"></div>
+            <div class="controles-lista">
+              <label for="ordenar-servicos">Ordenar por</label>
+              <select class="filtro-lista" id="ordenar-servicos">
+                <option value="recentes">Mais recentes</option>
+                <option value="antigos">Menos recentes</option>
+                <option value="duracao-menor">Duração (mínima)</option>
+                <option value="duracao-maior">Duração (máxima)</option>
+                <option value="nome-az">Nome (A–Z)</option>
+              </select>
+              <div class="alternador-visualizacao" role="group" aria-label="Visualização de serviços">
+                <button type="button" class="botao-visualizacao ativo" data-modulo="servicos" data-visualizacao="lista" aria-pressed="true">Lista</button>
+                <button type="button" class="botao-visualizacao" data-modulo="servicos" data-visualizacao="cards" aria-pressed="false">Cards</button>
+              </div>
+            </div>
+            <div id="lista-servicos" class="lista-servicos visualizacao-lista" aria-live="polite"></div>
           </section>
 
           <section class="dashboard_busca painel-lista" id="painel-atendimentos" aria-labelledby="titulo-atendimentos" hidden>
@@ -128,7 +161,10 @@
                 <h2 id="titulo-atendimentos">Fila de Atendimento</h2>
                 <p>Organize os horários e acompanhe cada atendimento.</p>
               </div>
-              <button class="botao-primario" id="abrir_CadastroAtendimento" type="button">+ Novo atendimento</button>
+              <div class="acoes-cabecalho">
+                <button class="botao-secundario" id="abrir-configuracao-turnos" type="button" hidden>Configurar turnos</button>
+                <button class="botao-primario" id="abrir_CadastroAtendimento" type="button">+ Novo atendimento</button>
+              </div>
             </div>
             <div class="barra-filtro-modulo">
               <label class="sr-only" for="busca-atendimentos">Pesquisar atendimentos</label>
@@ -142,10 +178,80 @@
                 <option value="servico">Serviço</option>
                 <option value="data">Data</option>
                 <option value="horario">Horário</option>
-                <option value="status">Status</option>
               </select>
             </div>
-            <div id="lista-atendimentos" class="lista-atendimentos" aria-live="polite"></div>
+            <div class="controles-lista">
+              <label for="ordenar-atendimentos">Ordenar por</label>
+              <select class="filtro-lista" id="ordenar-atendimentos">
+                <option value="proximo">Próximo da fila</option>
+                <option value="recentes">Agendados mais recentemente</option>
+                <option value="antigos">Agendados há mais tempo</option>
+                <option value="duracao-menor">Duração (mínima)</option>
+                <option value="duracao-maior">Duração (máxima)</option>
+              </select>
+              <label for="filtro-status-atendimentos">Status</label>
+              <select class="filtro-lista" id="filtro-status-atendimentos" aria-label="Filtrar por status">
+                <option value="todos">Todos</option>
+                <option value="aguardando">Aguardando</option>
+                <option value="em atendimento">Em atendimento</option>
+                <option value="concluído">Concluído</option>
+                <option value="cancelado">Cancelado</option>
+              </select>
+              <label for="turno-atendimentos">Turno</label>
+              <select class="filtro-lista" id="turno-atendimentos">
+                <option value="todos">Todos</option>
+                <option value="manha">Manhã</option>
+                <option value="tarde">Tarde</option>
+                <option value="fora-turno">Fora dos turnos</option>
+              </select>
+              <p class="resumo-turnos" id="resumo-turnos"></p>
+              <div class="alternador-visualizacao" role="group" aria-label="Visualização da fila">
+                <button type="button" class="botao-visualizacao ativo" data-modulo="atendimentos" data-visualizacao="lista" aria-pressed="true">Lista</button>
+                <button type="button" class="botao-visualizacao" data-modulo="atendimentos" data-visualizacao="cards" aria-pressed="false">Cards</button>
+              </div>
+            </div>
+            <div id="lista-atendimentos" class="lista-atendimentos visualizacao-lista" aria-live="polite"></div>
+          </section>
+
+          <section class="dashboard_busca painel-lista" id="painel-usuarios" aria-labelledby="titulo-usuarios" hidden>
+            <div class="cabecalho-lista">
+              <div>
+                <h2 id="titulo-usuarios">Usuários do sistema</h2>
+                <p>Cadastre contas e controle os cargos de acesso.</p>
+              </div>
+            </div>
+            <form class="form-usuario" id="form-cadastro-usuario">
+              <label for="nome-novo-usuario">Nome</label>
+              <input id="nome-novo-usuario" name="nome" required autocomplete="name">
+              <label for="email-novo-usuario">E-mail</label>
+              <input id="email-novo-usuario" name="email" type="email" required autocomplete="email">
+              <label for="papel-novo-usuario">Cargo inicial</label>
+              <select id="papel-novo-usuario" name="papel">
+                <option value="usuario">Usuário</option>
+                <option value="administrador">Administrador</option>
+              </select>
+              <button class="botao-primario" type="submit">Cadastrar usuário</button>
+              <p class="ajuda-formulario">Senha inicial: <strong>12345</strong>. A troca é obrigatória no primeiro acesso.</p>
+            </form>
+            <div class="barra-filtro-modulo filtros-usuarios">
+              <label class="sr-only" for="busca-usuarios">Pesquisar usuários</label>
+              <input class="busca-lista" id="busca-usuarios" type="search" placeholder="Pesquisar usuários..." autocomplete="off">
+              <label class="sr-only" for="campo-busca-usuarios">Pesquisar por campo</label>
+              <select class="filtro-lista" id="campo-busca-usuarios" aria-label="Pesquisar usuários por">
+                <option value="nome">Nome</option>
+                <option value="email">E-mail</option>
+                <option value="cargo">Cargo</option>
+              </select>
+              <label class="sr-only" for="filtro-cargo-usuarios">Filtrar usuários por cargo</label>
+              <select class="filtro-lista" id="filtro-cargo-usuarios" aria-label="Filtrar usuários por cargo">
+                <option value="todos">Todos os cargos</option>
+                <option value="proprietaria">Proprietária</option>
+                <option value="administrador">Administrador</option>
+                <option value="usuario">Usuário</option>
+              </select>
+            </div>
+            <p id="mensagem-usuario" class="mensagem-dashboard" role="status"></p>
+            <div id="lista-usuarios" class="lista-usuarios" aria-live="polite"></div>
           </section>
         </div>
 
@@ -237,6 +343,32 @@
 
               <p id="mensagem-erro-atendimento" class="mensagem-dashboard erro-dashboard" role="alert"></p>
               <button class="bt_cadastrar" id="salvar-atendimento" type="submit">Adicionar à fila</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="cadastro_cliente" id="modal-configurar-turnos" aria-hidden="true">
+          <div class="cadastro-content">
+            <button class="closeCadCli" id="fechar-configuracao-turnos" type="button" aria-label="Fechar configuração">&times;</button>
+            <h2>Horários dos turnos</h2>
+            <form class="form-cadastro-cliente" id="form-turnos">
+              <fieldset class="campos-turno">
+                <legend>Manhã</legend>
+                <label for="manha-inicio">Início</label>
+                <input required type="time" id="manha-inicio">
+                <label for="manha-fim">Fim</label>
+                <input required type="time" id="manha-fim">
+              </fieldset>
+              <fieldset class="campos-turno">
+                <legend>Tarde</legend>
+                <label for="tarde-inicio">Início</label>
+                <input required type="time" id="tarde-inicio">
+                <label for="tarde-fim">Fim</label>
+                <input required type="time" id="tarde-fim">
+              </fieldset>
+              <p>Os turnos servem para organizar e filtrar a fila. Eles não impedem agendamentos fora dessas faixas.</p>
+              <p id="mensagem-erro-turnos" class="mensagem-dashboard erro-dashboard" role="alert"></p>
+              <button class="bt_cadastrar" type="submit">Salvar horários</button>
             </form>
           </div>
         </div>
