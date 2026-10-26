@@ -348,27 +348,47 @@
         </div>
 
         <div class="cadastro_cliente" id="modal-configurar-turnos" aria-hidden="true">
-          <div class="cadastro-content">
+          <div class="cadastro-content turnos-content">
             <button class="closeCadCli" id="fechar-configuracao-turnos" type="button" aria-label="Fechar configuração">&times;</button>
-            <h2>Horários dos turnos</h2>
-            <form class="form-cadastro-cliente" id="form-turnos">
-              <fieldset class="campos-turno">
-                <legend>Manhã</legend>
-                <label for="manha-inicio">Início</label>
-                <input required type="time" id="manha-inicio">
-                <label for="manha-fim">Fim</label>
-                <input required type="time" id="manha-fim">
-              </fieldset>
-              <fieldset class="campos-turno">
-                <legend>Tarde</legend>
-                <label for="tarde-inicio">Início</label>
-                <input required type="time" id="tarde-inicio">
-                <label for="tarde-fim">Fim</label>
-                <input required type="time" id="tarde-fim">
-              </fieldset>
-              <p>Os turnos servem para organizar e filtrar a fila. Eles não impedem agendamentos fora dessas faixas.</p>
+            <header class="turnos-cabecalho">
+              <p>Fila de atendimento</p>
+              <h2>Configurar horários</h2>
+              <span>Defina as faixas usadas para organizar os atendimentos por turno.</span>
+            </header>
+            <form class="form-cadastro-cliente formulario-turnos" id="form-turnos">
+              <div class="turnos-grupos">
+                <fieldset class="campos-turno">
+                  <legend>Manhã</legend>
+                  <div class="turno-horarios">
+                    <div class="campo-turno">
+                      <label for="manha-inicio">Início</label>
+                      <input required type="time" id="manha-inicio">
+                    </div>
+                    <div class="campo-turno">
+                      <label for="manha-fim">Fim</label>
+                      <input required type="time" id="manha-fim">
+                    </div>
+                  </div>
+                </fieldset>
+                <fieldset class="campos-turno">
+                  <legend>Tarde</legend>
+                  <div class="turno-horarios">
+                    <div class="campo-turno">
+                      <label for="tarde-inicio">Início</label>
+                      <input required type="time" id="tarde-inicio">
+                    </div>
+                    <div class="campo-turno">
+                      <label for="tarde-fim">Fim</label>
+                      <input required type="time" id="tarde-fim">
+                    </div>
+                  </div>
+                </fieldset>
+              </div>
+              <p class="turnos-ajuda">Essas faixas organizam os filtros da fila; não limitam os horários em que um atendimento pode ser agendado.</p>
               <p id="mensagem-erro-turnos" class="mensagem-dashboard erro-dashboard" role="alert"></p>
-              <button class="bt_cadastrar" type="submit">Salvar horários</button>
+              <div class="turnos-acoes">
+                <button class="bt_cadastrar" type="submit">Salvar horários</button>
+              </div>
             </form>
           </div>
         </div>

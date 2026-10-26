@@ -74,6 +74,8 @@ Cada módulo tem pesquisa e seletor de atributo. A busca ignora diferenças de a
 
 Os turnos começam como manhã (08:00–12:00) e tarde (13:00–19:00). Contas privilegiadas podem alterar as faixas no módulo da fila; elas servem para filtrar e organizar a visualização, não restringem os horários que podem ser agendados.
 
+Na configuração, cada turno tem campos de início e fim agrupados em um painel próprio. As faixas devem ser válidas, não podem se sobrepor e a manhã deve terminar antes do início da tarde. Após salvar, os horários ficam persistidos em `backend/data/configuracoes.json` e são usados no resumo e no filtro por turno da fila.
+
 ## Responsabilidades do código
 
 ### Backend
@@ -92,6 +94,7 @@ Os turnos começam como manhã (08:00–12:00) e tarde (13:00–19:00). Contas p
 - `frontend/javascript/login.js` valida e envia as credenciais ao servidor; não armazena senhas no navegador.
 - `frontend/javascript/auth.js` consulta a sessão do servidor e solicita logout.
 - `frontend/javascript/dashboard_script.js` valida a sessão antes de iniciar a tela, controla inatividade e coordena os formulários e módulos.
+- O formulário de configuração dos turnos agrupa os horários de manhã e tarde e apresenta a finalidade dos filtros; a persistência e validação das faixas são feitas pelas rotas de configuração no backend.
 - `carregarClientes`, `carregarServicos` e `carregarAtendimentos` obtêm os dados da API; `renderizarClientes`, `renderizarServicos` e `renderizarAtendimentos` aplicam pesquisa, ordenação e visualização em lista/cards.
 - `normalizarBusca` e `correspondeBusca` preparam os textos e comparam os termos sem diferenciar acentos ou maiúsculas. `calcularIdade` valida a data e calcula a idade exibida.
 - Os helpers `atualizarSelecaoClienteAtendimento`, `atualizarCamposClienteAtendimento` e `preencherServicosAtendimento` conectam o cadastro de clientes e o catálogo ao formulário da fila; somente serviços ofertados podem ser selecionados.

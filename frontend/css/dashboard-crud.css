@@ -1732,3 +1732,144 @@ body {
     padding: 98px 12px 24px;
   }
 }
+
+.turnos-content {
+  width: min(100%, 640px);
+  max-width: 640px;
+  padding: 30px;
+  color: var(--crud-roxo);
+  background: #fff;
+}
+
+.turnos-cabecalho {
+  margin: 0 0 24px;
+  padding-right: 32px;
+  text-align: left;
+}
+
+.turnos-cabecalho p {
+  margin: 0 0 7px;
+  color: var(--crud-rosa);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.turnos-cabecalho h2 {
+  margin: 0 0 8px;
+  color: var(--crud-roxo);
+  font-size: 24px;
+  text-align: left;
+}
+
+.turnos-cabecalho span {
+  color: var(--crud-texto-suave);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.formulario-turnos {
+  width: 100%;
+  max-width: none;
+  gap: 16px;
+}
+
+.turnos-grupos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.formulario-turnos .campos-turno {
+  min-width: 0;
+  margin: 0;
+  padding: 14px;
+  border-color: #eee1e9;
+  background: #fffafd;
+}
+
+.formulario-turnos .campos-turno legend {
+  padding: 0 7px;
+  color: var(--crud-roxo);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.turno-horarios {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.campo-turno {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+}
+
+.formulario-turnos .campo-turno label {
+  color: #675a68;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.formulario-turnos .campo-turno input {
+  min-width: 0;
+  min-height: 44px;
+  margin: 0;
+  padding: 9px 10px;
+  border: 1px solid #e9dfe6;
+  border-radius: 8px;
+  color: var(--crud-roxo);
+  background: white;
+  font: 14px 'Comfortaa', sans-serif;
+}
+
+.formulario-turnos .campo-turno input:focus {
+  outline: 2px solid rgba(198, 107, 156, .28);
+  outline-offset: 1px;
+  border-color: var(--crud-rosa);
+}
+
+.turnos-ajuda {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 9px;
+  color: #675a68;
+  background: #fff6fa;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.turnos-content .erro-dashboard {
+  color: #a13c59;
+}
+
+.turnos-acoes {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.turnos-acoes .bt_cadastrar {
+  min-height: 44px;
+  margin: 0;
+  padding: 11px 18px;
+  border: 0;
+  font: 600 13px 'Comfortaa', sans-serif;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .turnos-content {
+    padding: 24px 18px;
+  }
+
+  .turnos-cabecalho h2 {
+    font-size: 21px;
+  }
+
+  .turnos-grupos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
