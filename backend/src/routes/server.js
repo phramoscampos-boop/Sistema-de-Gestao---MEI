@@ -29,6 +29,10 @@ const raizBackend = path.resolve(__dirname, '..', '..');
 const raizFrontend = path.resolve(raizBackend, '..', 'frontend');
 const caminhoArquivoAtendimentos = path.join(raizBackend, 'data', 'atendimentos.json');
 
+if (!fs.existsSync(caminhoArquivoAtendimentos)) {
+  fs.writeFileSync(caminhoArquivoAtendimentos, '[]\n');
+}
+
 const app = express();
 
 app.use(cors());

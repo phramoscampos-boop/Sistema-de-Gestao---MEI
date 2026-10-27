@@ -6,7 +6,7 @@ Aplicação web para cadastro de clientes, gestão de serviços e organização 
 
 ```text
 backend/
-  data/                       # Dados JSON ainda usados por atendimentos e configurações
+  data/                       # Dados locais ignorados pelo Git (exceto configurações padrão)
   src/
     controllers/
       authController.js       # Autenticação, sessões e gestão de contas
@@ -41,7 +41,9 @@ npm install
 npm start
 ```
 
-A aplicação usa PostgreSQL para usuários, clientes e serviços; atendimentos e configurações ainda usam os arquivos JSON em `backend/data/`. Configure o acesso ao banco antes de iniciar. É possível fornecer `DATABASE_URL` ou configurar as variáveis `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER` e `PGPASSWORD`. Na configuração local, o padrão é `localhost:5432`, banco `gestao-mei` e usuário `postgres`; a senha deve ser fornecida por `PGPASSWORD`.
+A aplicação usa PostgreSQL para usuários, clientes e serviços; atendimentos e configurações ainda usam arquivos JSON locais em `backend/data/`. Esses arquivos de dados pessoais e comerciais são ignorados pelo Git. Em uma instalação nova, o servidor cria automaticamente `atendimentos.json` vazio; restaure os dados de backup local quando necessário. O arquivo `configuracoes.json` contém apenas horários padrão e permanece versionado.
+
+Configure o acesso ao banco antes de iniciar. É possível fornecer `DATABASE_URL` ou configurar as variáveis `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER` e `PGPASSWORD`. Na configuração local, o padrão é `localhost:5432`, banco `gestao-mei` e usuário `postgres`; a senha deve ser fornecida por `PGPASSWORD`.
 
 Para migrar os registros JSON existentes, execute cada comando **uma única vez** a partir de `backend/`, após criar as tabelas correspondentes:
 
@@ -51,7 +53,7 @@ node migrar-servicos.js
 node migrar-usuarios.js
 ```
 
-O importador de usuários também cria a coluna `pode_gerenciar_usuarios` se ela ainda não existir. Preserve uma cópia dos arquivos JSON até confirmar a migração. Não execute os importadores novamente sobre os mesmos dados, pois eles podem criar registros duplicados.
+Os importadores precisam dos arquivos JSON de origem (`clientes.json`, `servicos.json` e `users.json`) em `backend/data/`; esses arquivos não são enviados ao Git. O importador de usuários também cria a coluna `pode_gerenciar_usuarios` se ela ainda não existir. Preserve uma cópia dos arquivos JSON até confirmar a migração. Não execute os importadores novamente sobre os mesmos dados, pois eles podem criar registros duplicados.
 
 A aplicação fica disponível em `http://localhost:3000`. Para executar os testes:
 
@@ -59,7 +61,7 @@ A aplicação fica disponível em `http://localhost:3000`. Para executar os test
 npm test
 ```
 
-Os testes são sequenciais porque usam coleções JSON de atendimentos/configuração e simulam as consultas PostgreSQL com dados em memória.
+Os testes são sequenciais porque usam temporariamente o JSON local de atendimentos e simulam as consultas PostgreSQL com dados em memória.
 
 Na primeira instalação, crie a conta proprietária localmente com:
 
@@ -85,7 +87,10 @@ O perfil indica se a conta é Proprietária, Administrador privilegiado, Adminis
 
 - **Clientes:** nome, telefone, data de nascimento, idade calculada, CEP e data de cadastro. O ano da data de nascimento deve ter quatro dígitos. A seleção de serviços não faz parte do cadastro do cliente.
 - **Serviços:** nome, duração, valor e situação de oferta.
-- **Fila de atendimento:** cliente, serviço, data, horário e status. A seleção de serviço ocorre neste módulo.
+- **Fila de atendimento:** cliente, serviço, data, horário e status. A seleção de serviço ocorre neste módulo. A dashboard exibe as quantidades totais por status.
+- **Usuários:** contas e cargos de acesso; a dashboard exibe a quantidade total para quem tem permissão de gestão.
+
+A dashboard mostra também a quantidade total de clientes e serviços cadastrados.
 
 Cada módulo tem pesquisa e seletor de atributo. A busca ignora diferenças de acentuação e maiúsculas/minúsculas. Clientes, serviços e fila abrem em lista, com alternância para cards completos. A fila permite filtrar diretamente por status e turno. Usuários podem ser pesquisados por nome, e-mail ou cargo e filtrados pelo cargo.
 

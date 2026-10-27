@@ -1873,3 +1873,34 @@ body {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.contagem-modulo {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 10px !important;
+  padding: 7px 11px;
+  border: 1px solid rgba(59, 10, 69, .12);
+  border-radius: 999px;
+  color: var(--crud-roxo) !important;
+  background: rgba(255, 255, 255, .72);
+  font-size: 12px !important;
+  font-weight: 700;
+}
+
+.contagens-atendimentos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.contagens-atendimentos span {
+  padding: 7px 10px;
+  border: 1px solid rgba(59, 10, 69, .12);
+  border-radius: 999px;
+  color: var(--crud-roxo);
+  background: rgba(255, 255, 255, .72);
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+}

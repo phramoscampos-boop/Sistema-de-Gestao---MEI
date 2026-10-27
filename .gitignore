@@ -1,5 +1,28 @@
+# Installed dependencies
 node_modules/
+
+# Local database credentials and key material
 .env
 .env.*
 !.env.example
+.pgpass
+.npmrc
+!.npmrc.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.ppk
+*.p8
+*.jks
+*.keystore
+*.dump
+*.backup
+*.sqlite
+*.sqlite3
+*.db
 npm-debug.log*
+
+# Personal/business records kept only on each local installation
+/backend/data/*.json
+!/backend/data/configuracoes.json

@@ -85,6 +85,7 @@
               <div>
                 <h2 id="titulo-clientes">Clientes</h2>
                 <p>Gerencie os dados e contatos dos seus clientes.</p>
+                <p class="contagem-modulo" id="contagem-clientes" aria-live="polite">Clientes cadastrados: 0</p>
               </div>
               <button class="botao-primario" id="abrir_CadastroCliente" type="button">+ Cadastrar cliente</button>
             </div>
@@ -123,6 +124,7 @@
               <div>
                 <h2 id="titulo-servicos">Serviços</h2>
                 <p>Organize os serviços oferecidos pelo seu negócio.</p>
+                <p class="contagem-modulo" id="contagem-servicos" aria-live="polite">Serviços cadastrados: 0</p>
               </div>
               <button class="botao-primario" id="abrir_CadastroServico" type="button">+ Cadastrar serviço</button>
             </div>
@@ -160,6 +162,13 @@
               <div>
                 <h2 id="titulo-atendimentos">Fila de Atendimento</h2>
                 <p>Organize os horários e acompanhe cada atendimento.</p>
+                <div class="contagens-atendimentos" aria-live="polite" aria-label="Quantidade de atendimentos por status">
+                  <span>Total: <strong id="total-atendimentos">0</strong></span>
+                  <span>Em atendimento: <strong id="contagem-em-atendimento">0</strong></span>
+                  <span>Aguardando: <strong id="contagem-aguardando">0</strong></span>
+                  <span>Concluídos: <strong id="contagem-concluidos">0</strong></span>
+                  <span>Cancelados: <strong id="contagem-cancelados">0</strong></span>
+                </div>
               </div>
               <div class="acoes-cabecalho">
                 <button class="botao-secundario" id="abrir-configuracao-turnos" type="button" hidden>Configurar turnos</button>
@@ -218,6 +227,7 @@
               <div>
                 <h2 id="titulo-usuarios">Usuários do sistema</h2>
                 <p>Cadastre contas e controle os cargos de acesso.</p>
+                <p class="contagem-modulo" id="contagem-usuarios" aria-live="polite">Usuários cadastrados: 0</p>
               </div>
             </div>
             <form class="form-usuario" id="form-cadastro-usuario">

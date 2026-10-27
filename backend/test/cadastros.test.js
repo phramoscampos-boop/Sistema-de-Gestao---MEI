@@ -6,7 +6,6 @@ import { app } from '../src/routes/server.js';
 import pool from '../src/config/database.js';
 
 const arquivoAtendimentos = new URL('../data/atendimentos.json', import.meta.url);
-const arquivoUsuarios = new URL('../data/users.json', import.meta.url);
 const arquivoConfiguracoes = new URL('../data/configuracoes.json', import.meta.url);
 let cookieSessao = '';
 const fetch = (url, opcoes = {}) => globalThis.fetch(url, {
@@ -19,25 +18,20 @@ const fetch = (url, opcoes = {}) => globalThis.fetch(url, {
 
 test('cadastra serviços e clientes, e atualiza a oferta do serviço', async () => {
   const backupAtendimentos = fs.readFileSync(arquivoAtendimentos, 'utf-8');
-  const backupUsuarios = fs.readFileSync(arquivoUsuarios, 'utf-8');
   const backupConfiguracoes = fs.readFileSync(arquivoConfiguracoes, 'utf-8');
   const consultaOriginal = pool.query;
   const servicosBanco = new Map();
   const clientesBanco = new Map();
-  const usuariosBanco = new Map(JSON.parse(backupUsuarios).map((usuario) => {
-    const registro = {
-      id: usuario.id,
-      nome: usuario.nome,
-      email: usuario.email,
-      senha: usuario.senha,
-      cargo: usuario.cargo ?? usuario.papel,
-      precisaAlterarSenha: usuario.precisaAlterarSenha,
-      podeGerenciarUsuarios: usuario.podeGerenciarUsuarios
-    };
-    return [String(registro.id), registro];
-  }));
-  const primeiroUsuario = usuariosBanco.values().next().value;
-  primeiroUsuario.senha = 'senhaTeste123';
+  const primeiroUsuario = {
+    id: 1,
+    nome: 'Administrador de teste',
+    email: 'admin@teste.local',
+    senha: 'senhaTeste123',
+    cargo: 'administrador',
+    precisaAlterarSenha: false,
+    podeGerenciarUsuarios: true
+  };
+  const usuariosBanco = new Map([['1', primeiroUsuario]]);
   let proximoIdServico = 1;
   let proximoIdCliente = 1;
   pool.query = async (consulta, parametros = []) => {

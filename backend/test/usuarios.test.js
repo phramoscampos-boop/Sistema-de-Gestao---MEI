@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import bcrypt from 'bcryptjs';
 
 import { app } from '../src/routes/server.js';
 import pool from '../src/config/database.js';
@@ -23,9 +23,6 @@ test('formata campos do usuário sem expor senha', () => {
   assert.equal('senha' in usuario, false);
 });
 
-const arquivoUsuarios = new URL('../data/users.json', import.meta.url);
-const backupUsuarios = fs.readFileSync(arquivoUsuarios, 'utf-8');
-
 async function iniciarServidor() {
   const servidor = app.listen(0);
   await new Promise((resolve) => servidor.once('listening', resolve));
@@ -37,19 +34,16 @@ async function iniciarServidor() {
 test('somente usuários existentes podem entrar e trocar a própria senha', async () => {
   const { servidor, porta } = await iniciarServidor();
   const consultaOriginal = pool.query;
-  const usuariosBanco = new Map(JSON.parse(backupUsuarios).map((usuario) => {
-    const registro = {
-      id: usuario.id,
-      nome: usuario.nome,
-      email: usuario.email,
-      senha: usuario.senha,
-      cargo: usuario.cargo ?? usuario.papel,
-      precisaAlterarSenha: usuario.precisaAlterarSenha,
-      podeGerenciarUsuarios: usuario.podeGerenciarUsuarios
-    };
-    return [String(registro.id), registro];
-  }));
-  let proximoId = Math.max(...[...usuariosBanco.keys()].map((id) => Number(id) || 0)) + 1;
+  const usuariosBanco = new Map([['1', {
+    id: 1,
+    nome: 'Pedro Teste',
+    email: 'pedro@empresa.com',
+    senha: await bcrypt.hash('pedro123', 10),
+    cargo: 'administrador',
+    precisaAlterarSenha: false,
+    podeGerenciarUsuarios: true
+  }]]);
+  let proximoId = 2;
   pool.query = async (consulta, parametros = []) => {
     if (consulta.startsWith('SELECT id, nome, telefone, data_nascimento')) {
       return { rows: [] };

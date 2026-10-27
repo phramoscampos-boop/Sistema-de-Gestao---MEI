@@ -190,6 +190,29 @@ function fecharModais() {
   homePage.classList.remove('home_blur');
 }
 
+function atualizarContagem(id, texto) {
+  document.getElementById(id).textContent = texto;
+}
+
+function atualizarContagensAtendimentos() {
+  const contagens = {
+    'em atendimento': 'contagem-em-atendimento',
+    aguardando: 'contagem-aguardando',
+    'concluído': 'contagem-concluidos',
+    cancelado: 'contagem-cancelados'
+  };
+  atualizarContagem('total-atendimentos', atendimentosCarregados.length);
+  for (const [status, elementoId] of Object.entries(contagens)) {
+    const quantidade = atendimentosCarregados.filter((item) => item.status === status).length;
+    atualizarContagem(elementoId, quantidade);
+  }
+}
+
+function marcarContagensAtendimentosIndisponiveis() {
+  ['total-atendimentos', 'contagem-em-atendimento', 'contagem-aguardando',
+    'contagem-concluidos', 'contagem-cancelados'].forEach((id) => atualizarContagem(id, '—'));
+}
+
 function abrirModal(modal) {
   fecharModais();
   modal.classList.add('aberto');
@@ -490,8 +513,10 @@ async function carregarClientes() {
 
   try {
     clientesCarregados = await requisitarJson('/clientes');
+    atualizarContagem('contagem-clientes', `Clientes cadastrados: ${clientesCarregados.length}`);
     renderizarClientes();
   } catch (erro) {
+    atualizarContagem('contagem-clientes', 'Contagem indisponível');
     const mensagem = document.createElement('p');
     mensagem.className = 'mensagem-lista';
     mensagem.textContent = erro.message || 'Não foi possível carregar os clientes.';
@@ -575,9 +600,11 @@ function renderizarClientes() {
 async function carregarServicos() {
   try {
     servicosCarregados = await requisitarJson('/servicos');
+    atualizarContagem('contagem-servicos', `Serviços cadastrados: ${servicosCarregados.length}`);
     renderizarServicos();
     if (atendimentosCarregados.length) renderizarAtendimentos();
   } catch (erro) {
+    atualizarContagem('contagem-servicos', 'Contagem indisponível');
     renderizarServicos(erro.message || 'Não foi possível carregar os serviços.');
   }
 }
@@ -674,8 +701,10 @@ async function carregarAtendimentos() {
   lista.replaceChildren();
   try {
     atendimentosCarregados = await requisitarJson('/atendimentos');
+    atualizarContagensAtendimentos();
     renderizarAtendimentos();
   } catch (erro) {
+    marcarContagensAtendimentosIndisponiveis();
     const mensagem = document.createElement('p');
     mensagem.className = 'mensagem-lista';
     mensagem.textContent = erro.message || 'Não foi possível carregar os atendimentos.';
@@ -864,8 +893,10 @@ async function carregarUsuarios() {
     mensagem.textContent = '';
     try {
       usuariosCarregados = await requisitarJson('/usuarios');
+      atualizarContagem('contagem-usuarios', `Usuários cadastrados: ${usuariosCarregados.length}`);
       renderizarUsuarios();
     } catch (erro) {
+      atualizarContagem('contagem-usuarios', 'Contagem indisponível');
       mensagem.textContent = erro.message || 'Não foi possível carregar os usuários.';
       mensagem.classList.add('mostrar');
     }
@@ -1356,4 +1387,5 @@ formServico.addEventListener('submit', async (evento) => {
 carregarClientes();
 carregarServicos();
 carregarAtendimentos();
+if (usuarioLogado?.podeGerenciarUsuarios) carregarUsuarios();
 })();
