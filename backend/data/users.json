@@ -23,10 +23,10 @@
     "id": "8cb7c508188eb2d330878cd2b1db1cbe",
     "nome": "Elisângela",
     "email": "elis@empresa.com",
-    "senha": "$2b$10$BhBVy2GDq7112wc9LJb31OvFeXk7NvEN/8iLhX84YdjVX9Kn9rXii",
+    "senha": "$2b$10$z7UB3OPVYfBOOvea3R4cuOmxKqdak4euG8RPQNvv/guGS9sG7vYS2",
     "papel": "proprietaria",
     "podeGerenciarUsuarios": true,
-    "precisaAlterarSenha": true,
+    "precisaAlterarSenha": false,
     "ativo": true,
     "criadoEm": "2026-10-26T14:25:35.473Z"
   },
