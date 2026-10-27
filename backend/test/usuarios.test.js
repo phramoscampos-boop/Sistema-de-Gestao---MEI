@@ -3,22 +3,24 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 import { app } from '../src/routes/server.js';
-import { normalizarUsuario } from '../src/services/userService.js';
+import pool from '../src/config/database.js';
+import { formatarUsuario } from '../src/services/userService.js';
 
-test('contas antigas só recebem privilégios na migração inicial', () => {
-  const contaLegada = { id: 'conta-legada', nome: 'Conta Legada', email: 'legado@empresa.com', senha: 'hash' };
+test('formata campos do usuário sem expor senha', () => {
+  const usuario = formatarUsuario({
+    id: 8,
+    nome: 'Usuária Teste',
+    email: 'teste@empresa.com',
+    senha: 'hash-secreto',
+    cargo: 'administrador',
+    precisa_alterar_senha: true,
+    pode_gerenciar_usuarios: true
+  });
 
-  assert.deepEqual(
-    [normalizarUsuario(contaLegada, 0).papel, normalizarUsuario(contaLegada, 0).podeGerenciarUsuarios],
-    ['usuario', false]
-  );
-  assert.deepEqual(
-    [
-      normalizarUsuario(contaLegada, 0, true).papel,
-      normalizarUsuario(contaLegada, 0, true).podeGerenciarUsuarios
-    ],
-    ['administrador', true]
-  );
+  assert.equal(usuario.papel, 'administrador');
+  assert.equal(usuario.precisaAlterarSenha, true);
+  assert.equal(usuario.podeGerenciarUsuarios, true);
+  assert.equal('senha' in usuario, false);
 });
 
 const arquivoUsuarios = new URL('../data/users.json', import.meta.url);
@@ -34,6 +36,91 @@ async function iniciarServidor() {
 
 test('somente usuários existentes podem entrar e trocar a própria senha', async () => {
   const { servidor, porta } = await iniciarServidor();
+  const consultaOriginal = pool.query;
+  const usuariosBanco = new Map(JSON.parse(backupUsuarios).map((usuario) => {
+    const registro = {
+      id: usuario.id,
+      nome: usuario.nome,
+      email: usuario.email,
+      senha: usuario.senha,
+      cargo: usuario.cargo ?? usuario.papel,
+      precisaAlterarSenha: usuario.precisaAlterarSenha,
+      podeGerenciarUsuarios: usuario.podeGerenciarUsuarios
+    };
+    return [String(registro.id), registro];
+  }));
+  let proximoId = Math.max(...[...usuariosBanco.keys()].map((id) => Number(id) || 0)) + 1;
+  pool.query = async (consulta, parametros = []) => {
+    if (consulta.startsWith('SELECT id, nome, telefone, data_nascimento')) {
+      return { rows: [] };
+    }
+    if (consulta.startsWith('SELECT 1 FROM usuarios')) {
+      return {
+        rows: [...usuariosBanco.values()].some((usuario) => usuario.cargo === 'proprietaria')
+          ? [{ '?column?': 1 }]
+          : []
+      };
+    }
+    if (consulta.includes('FROM usuarios') && consulta.includes('WHERE id = $1')) {
+      const usuario = usuariosBanco.get(String(parametros[0]));
+      return { rows: usuario ? [{ ...usuario }] : [] };
+    }
+    if (consulta.includes('FROM usuarios') && consulta.includes('WHERE email = $1')) {
+      const usuario = [...usuariosBanco.values()].find((item) => {
+        if (consulta.includes('WHERE id = $1')) return String(item.id) === String(parametros[0]);
+        if (consulta.includes('lower(nome)')) {
+          return item.email === parametros[0] || item.nome.toLowerCase() === parametros[0];
+        }
+        return item.email === parametros[0];
+      });
+      return { rows: usuario ? [{ ...usuario }] : [] };
+    }
+    if (consulta.startsWith('SELECT id, nome, email, cargo')) {
+      return { rows: [...usuariosBanco.values()].map(({ senha, ...usuario }) => ({ ...usuario })) };
+    }
+    if (consulta.startsWith('INSERT INTO usuarios')) {
+      if ([...usuariosBanco.values()].some((item) => item.email === parametros[1])) {
+        throw Object.assign(new Error('duplicate key'), { code: '23505' });
+      }
+      const usuario = {
+        id: proximoId++,
+        nome: parametros[0],
+        email: parametros[1],
+        senha: parametros[2],
+        cargo: parametros[3],
+        precisaAlterarSenha: parametros[4],
+        podeGerenciarUsuarios: parametros[5]
+      };
+      usuariosBanco.set(String(usuario.id), usuario);
+      return { rows: [{ ...usuario }] };
+    }
+    if (consulta.startsWith('UPDATE usuarios')) {
+      const id = String(parametros.at(-1));
+      const usuario = usuariosBanco.get(id);
+      if (!usuario) return { rows: [] };
+
+      if (consulta.includes('SET senha =')) {
+        usuario.senha = parametros[0];
+        usuario.precisaAlterarSenha = parametros[1];
+      } else if (consulta.includes('SET email =')) {
+        if ([...usuariosBanco.values()].some((item) => item.id !== usuario.id && item.email === parametros[0])) {
+          throw Object.assign(new Error('duplicate key'), { code: '23505' });
+        }
+        usuario.email = parametros[0];
+      } else if (consulta.includes('SET cargo =')) {
+        if (usuario.podeGerenciarUsuarios) return { rows: [] };
+        usuario.cargo = parametros[0];
+      }
+      return { rows: [{ ...usuario }] };
+    }
+    if (consulta.startsWith('DELETE FROM usuarios')) {
+      const usuario = usuariosBanco.get(String(parametros[0]));
+      if (!usuario || usuario.podeGerenciarUsuarios) return { rows: [] };
+      usuariosBanco.delete(String(parametros[0]));
+      return { rows: [{ id: usuario.id }] };
+    }
+    throw new Error(`Consulta de teste não reconhecida: ${consulta}`);
+  };
 
   try {
     const respostaSessaoAusente = await fetch(`http://localhost:${porta}/auth/session`);
@@ -102,7 +189,7 @@ test('somente usuários existentes podem entrar e trocar a própria senha', asyn
       body: JSON.stringify({ email: 'pedro@empresa.com', senha: 'senhaNova123' })
     });
     assert.equal(respostaLoginNova.status, 200);
-    assert.match(fs.readFileSync(arquivoUsuarios, 'utf-8'), /"\$2[aby]\$10\$/);
+    assert.match(usuariosBanco.get('1').senha, /^\$2[aby]\$10\$/);
 
     const cookieSessao = respostaLoginNova.headers.get('set-cookie').split(';', 1)[0];
     const respostaDashboardAutenticada = await fetch(`http://localhost:${porta}/html/dashboard.html`, {
@@ -271,8 +358,7 @@ test('somente usuários existentes podem entrar e trocar a própria senha', asyn
     });
     assert.equal(respostaAposLogout.status, 401);
   } finally {
-    // Restaura o arquivo compartilhado para não deixar o usuário de teste persistido.
-    fs.writeFileSync(arquivoUsuarios, backupUsuarios);
+    pool.query = consultaOriginal;
 
     await new Promise((resolve, reject) => {
       servidor.close((erro) => (erro ? reject(erro) : resolve()));

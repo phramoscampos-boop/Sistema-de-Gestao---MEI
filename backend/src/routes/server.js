@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
+import pool from '../config/database.js';
 import {
   alterarSenha,
   alterarPapelUsuario,
@@ -26,8 +27,6 @@ const __dirname = path.dirname(__filename);
 // Resolve dados e arquivos estáticos pelas raízes do projeto, sem depender da pasta deste arquivo.
 const raizBackend = path.resolve(__dirname, '..', '..');
 const raizFrontend = path.resolve(raizBackend, '..', 'frontend');
-const caminhoArquivoClientes = path.join(raizBackend, 'data', 'clientes.json');
-const caminhoArquivoServicos = path.join(raizBackend, 'data', 'servicos.json');
 const caminhoArquivoAtendimentos = path.join(raizBackend, 'data', 'atendimentos.json');
 
 const app = express();
@@ -116,6 +115,43 @@ function validarIdade(valor) {
   return Number.isInteger(idade) && idade >= 1 && idade <= 120 ? idade : null;
 }
 
+function validarIdServico(valor) {
+  if ((typeof valor !== 'number' && typeof valor !== 'string') || !/^[1-9]\d*$/.test(String(valor))) {
+    return null;
+  }
+  const id = Number(valor);
+  return Number.isSafeInteger(id) ? id : null;
+}
+
+function validarIdCliente(valor) {
+  if ((typeof valor !== 'number' && typeof valor !== 'string') || !/^[1-9]\d*$/.test(String(valor))) {
+    return null;
+  }
+  const id = Number(valor);
+  return Number.isSafeInteger(id) ? id : null;
+}
+
+function normalizarCliente(cliente) {
+  const dataNascimento = cliente.dataNascimento instanceof Date
+    ? cliente.dataNascimento.toISOString().slice(0, 10)
+    : cliente.dataNascimento?.slice(0, 10) ?? null;
+  const dataCadastro = cliente.dataCadastro instanceof Date
+    ? cliente.dataCadastro.toISOString()
+    : cliente.dataCadastro;
+
+  return {
+    ...cliente,
+    dataNascimento,
+    dataCadastro,
+    criadoEm: dataCadastro,
+    idade: calcularIdade(dataNascimento)
+  };
+}
+
+function normalizarServico(servico) {
+  return { ...servico, valor: Number(servico.valor) };
+}
+
 function validarCep(valor) {
   if (typeof valor !== 'string' || !/^[\d\s-]+$/.test(valor.trim())) return null;
   const cep = apenasDigitos(valor);
@@ -151,16 +187,24 @@ function validarDataAtendimento(data, horario) {
 
 const statusAtendimentoValidos = ['aguardando', 'em atendimento', 'concluído', 'cancelado'];
 
-// O CRUD de clientes guarda apenas dados pessoais/de contato; serviços são escolhidos na fila.
-app.get('/clientes', (req, res) => {
+// Lista os clientes do PostgreSQL com os nomes de propriedades esperados pelo frontend.
+app.get('/clientes', async (req, res) => {
   try {
-    return res.json(lerRegistros(caminhoArquivoClientes, 'clientes'));
+    const resultado = await pool.query(
+      `SELECT id, nome, telefone, data_nascimento AS "dataNascimento", cep,
+              data_cadastro AS "dataCadastro"
+       FROM clientes
+       ORDER BY id`
+    );
+    return res.json(resultado.rows.map(normalizarCliente));
   } catch (erro) {
-    return responderErroDeArquivo(res, erro, 'clientes');
+    console.error('Não foi possível listar os clientes:', erro.message);
+    return res.status(500).json({ mensagem: 'Não foi possível buscar os clientes.' });
   }
 });
 
-app.post('/clientes', (req, res) => {
+// Valida e cadastra um cliente no banco, calculando sua idade a partir do nascimento.
+app.post('/clientes', async (req, res) => {
   const { nome, telefone, dataNascimento, cep } = req.body || {};
   const nomeNormalizado = validarNomeCliente(nome);
   const telefoneNormalizado = validarTelefoneCliente(telefone);
@@ -181,26 +225,30 @@ app.post('/clientes', (req, res) => {
   }
 
   try {
-    const clientes = lerRegistros(caminhoArquivoClientes, 'clientes');
-    const novoCliente = {
-      id: randomUUID(),
-      nome: nomeNormalizado,
-      telefone: telefoneNormalizado,
-      idade: idadeNormalizada,
-      dataNascimento,
-      cep: cepNormalizado,
-      criadoEm: new Date().toISOString()
-    };
-
-    clientes.push(novoCliente);
-    salvarRegistros(caminhoArquivoClientes, clientes);
-    return res.status(201).json({ mensagem: 'Cliente cadastrado com sucesso.', cliente: novoCliente });
+    const resultado = await pool.query(
+      `INSERT INTO clientes (nome, telefone, data_nascimento, cep)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, nome, telefone, data_nascimento AS "dataNascimento", cep,
+                 data_cadastro AS "dataCadastro"`,
+      [nomeNormalizado, telefoneNormalizado, dataNascimento, cepNormalizado]
+    );
+    return res.status(201).json({
+      mensagem: 'Cliente cadastrado com sucesso.',
+      cliente: normalizarCliente(resultado.rows[0])
+    });
   } catch (erro) {
-    return responderErroDeArquivo(res, erro, 'clientes');
+    console.error('Não foi possível cadastrar o cliente:', erro.message);
+    return res.status(500).json({ mensagem: 'Não foi possível cadastrar o cliente.' });
   }
 });
 
-app.put('/clientes/:id', (req, res) => {
+// Atualiza os dados do cliente e mantém a data de nascimento se ela não foi enviada.
+app.put('/clientes/:id', async (req, res) => {
+  const id = validarIdCliente(req.params.id);
+  if (id === null) {
+    return res.status(400).json({ mensagem: 'Informe um identificador de cliente válido.' });
+  }
+
   const { nome, telefone, dataNascimento, cep } = req.body || {};
   const nomeNormalizado = validarNomeCliente(nome);
   const telefoneNormalizado = validarTelefoneCliente(telefone);
@@ -221,49 +269,49 @@ app.put('/clientes/:id', (req, res) => {
   }
 
   try {
-    const clientes = lerRegistros(caminhoArquivoClientes, 'clientes');
-    const cliente = clientes.find((item) => String(item.id) === req.params.id);
-    if (!cliente) {
+    const resultado = await pool.query(
+      `UPDATE clientes
+       SET nome = $1, telefone = $2, data_nascimento = COALESCE($3, data_nascimento), cep = $4
+       WHERE id = $5
+       RETURNING id, nome, telefone, data_nascimento AS "dataNascimento", cep,
+                 data_cadastro AS "dataCadastro"`,
+      [nomeNormalizado, telefoneNormalizado, dataNascimento ?? null, cepNormalizado, id]
+    );
+    if (resultado.rows.length === 0) {
       return res.status(404).json({ mensagem: 'Cliente não encontrado.' });
     }
 
-    const idadeNormalizada = dataNascimento === undefined && !cliente.dataNascimento
-      ? validarIdade(cliente.idade)
-      : idadeCalculada;
-    if (!idadeNormalizada) {
-      return res.status(400).json({ mensagem: 'Informe uma data de nascimento válida.' });
-    }
-
-    Object.assign(cliente, {
-      nome: nomeNormalizado,
-      telefone: telefoneNormalizado,
-      idade: idadeNormalizada,
-      cep: cepNormalizado
+    return res.json({
+      mensagem: 'Cliente atualizado com sucesso.',
+      cliente: normalizarCliente(resultado.rows[0])
     });
-    if (dataNascimento !== undefined) cliente.dataNascimento = dataNascimento;
-    delete cliente.servicoId;
-    delete cliente.servicoNome;
-    delete cliente.servicoValor;
-    salvarRegistros(caminhoArquivoClientes, clientes);
-    return res.json({ mensagem: 'Cliente atualizado com sucesso.', cliente });
   } catch (erro) {
-    return responderErroDeArquivo(res, erro, 'clientes');
+    console.error('Não foi possível atualizar o cliente:', erro.message);
+    return res.status(500).json({ mensagem: 'Não foi possível atualizar o cliente.' });
   }
 });
 
-app.delete('/clientes/:id', (req, res) => {
+// Exclui o cliente, distinguindo registros inexistentes de vínculos que impedem a exclusão.
+app.delete('/clientes/:id', async (req, res) => {
+  const id = validarIdCliente(req.params.id);
+  if (id === null) {
+    return res.status(400).json({ mensagem: 'Informe um identificador de cliente válido.' });
+  }
+
   try {
-    const clientes = lerRegistros(caminhoArquivoClientes, 'clientes');
-    const indice = clientes.findIndex((item) => String(item.id) === req.params.id);
-    if (indice === -1) {
+    const resultado = await pool.query('DELETE FROM clientes WHERE id = $1 RETURNING id', [id]);
+    if (resultado.rows.length === 0) {
       return res.status(404).json({ mensagem: 'Cliente não encontrado.' });
     }
-
-    clientes.splice(indice, 1);
-    salvarRegistros(caminhoArquivoClientes, clientes);
     return res.json({ mensagem: 'Cliente excluído com sucesso.' });
   } catch (erro) {
-    return responderErroDeArquivo(res, erro, 'clientes');
+    if (erro.code === '23503') {
+      return res.status(409).json({
+        mensagem: 'Não é possível excluir este cliente porque há registros vinculados a ele.'
+      });
+    }
+    console.error('Não foi possível excluir o cliente:', erro.message);
+    return res.status(500).json({ mensagem: 'Não foi possível excluir o cliente.' });
   }
 });
 
@@ -278,12 +326,13 @@ app.get('/atendimentos', (req, res) => {
   }
 });
 
-app.post('/atendimentos', (req, res) => {
+app.post('/atendimentos', async (req, res) => {
   const dados = req.body || {};
   const nome = validarNomeCliente(dados.nome);
   const telefone = validarTelefoneCliente(dados.telefone);
   const idade = validarIdade(dados.idade);
-  const { data, horario, servicoId } = dados;
+  const { data, horario } = dados;
+  const servicoId = validarIdServico(dados.servicoId);
 
   if (!validarDataAtendimento(data, horario)) {
     return res.status(400).json({ mensagem: 'Informe uma data e um horário futuros válidos.' });
@@ -293,19 +342,35 @@ app.post('/atendimentos', (req, res) => {
   }
 
   try {
-    const servicos = lerRegistros(caminhoArquivoServicos, 'serviços');
-    const servico = servicos.find(
-      (item) => String(item.id) === String(servicoId) && item.ofertado === true
+    const resultadoServico = await pool.query(
+      'SELECT id, nome FROM servicos WHERE id = $1 AND ofertado = TRUE',
+      [servicoId]
     );
+    const servico = resultadoServico.rows[0];
     if (!servico) {
       return res.status(400).json({ mensagem: 'O serviço selecionado não está disponível.' });
     }
 
-    const clientes = lerRegistros(caminhoArquivoClientes, 'clientes');
-    const cliente = dados.clienteId
-      ? clientes.find((item) => String(item.id) === String(dados.clienteId))
-      : clientes.find((item) => apenasDigitos(item.telefone) === telefone);
-    if (dados.clienteId && !cliente) {
+    const clienteId = dados.clienteId ? validarIdCliente(dados.clienteId) : null;
+    if (dados.clienteId && clienteId === null) {
+      return res.status(404).json({ mensagem: 'O cliente selecionado não foi encontrado.' });
+    }
+
+    const resultadoCliente = clienteId
+      ? await pool.query(
+        'SELECT id, nome, telefone, data_nascimento AS "dataNascimento" FROM clientes WHERE id = $1',
+        [clienteId]
+      )
+      : await pool.query(
+        `SELECT id, nome, telefone, data_nascimento AS "dataNascimento"
+         FROM clientes
+         WHERE regexp_replace(telefone, '[^0-9]', '', 'g') = $1
+         ORDER BY id
+         LIMIT 1`,
+        [telefone]
+      );
+    const cliente = resultadoCliente.rows[0];
+    if (clienteId && !cliente) {
       return res.status(404).json({ mensagem: 'O cliente selecionado não foi encontrado.' });
     }
 
@@ -323,7 +388,7 @@ app.post('/atendimentos', (req, res) => {
     const nomeFinal = cliente ? validarNomeCliente(cliente.nome) : nome;
     const telefoneFinal = cliente ? validarTelefoneCliente(cliente.telefone) : telefone;
     const idadeFinal = cliente
-      ? validarIdade(cliente.idade) || calcularIdade(cliente.dataNascimento)
+      ? normalizarCliente(cliente).idade
       : idade;
     if (!nomeFinal || !telefoneFinal || !idadeFinal) {
       return res.status(400).json({ mensagem: 'Os dados do cliente selecionado precisam ser corrigidos antes do agendamento.' });
@@ -346,16 +411,18 @@ app.post('/atendimentos', (req, res) => {
     salvarRegistros(caminhoArquivoAtendimentos, atendimentos);
     return res.status(201).json({ mensagem: 'Atendimento adicionado à fila.', atendimento });
   } catch (erro) {
-    return responderErroDeArquivo(res, erro, 'atendimentos, clientes ou serviços');
+    console.error('Não foi possível criar o atendimento:', erro.message);
+    return res.status(500).json({ mensagem: 'Não foi possível acessar os dados do atendimento ou do serviço.' });
   }
 });
 
-app.put('/atendimentos/:id', (req, res) => {
+app.put('/atendimentos/:id', async (req, res) => {
   const dados = req.body || {};
   const nome = validarNomeCliente(dados.nome);
   const telefone = validarTelefoneCliente(dados.telefone);
   const idade = validarIdade(dados.idade);
-  const { data, horario, servicoId, status } = dados;
+  const { data, horario, status } = dados;
+  const servicoId = validarIdServico(dados.servicoId);
 
   if (!validarDataAtendimento(data, horario)) {
     return res.status(400).json({ mensagem: 'Informe uma data e um horário futuros válidos.' });
@@ -365,10 +432,11 @@ app.put('/atendimentos/:id', (req, res) => {
   }
 
   try {
-    const servicos = lerRegistros(caminhoArquivoServicos, 'serviços');
-    const servico = servicos.find(
-      (item) => String(item.id) === String(servicoId) && item.ofertado === true
+    const resultadoServico = await pool.query(
+      'SELECT id, nome FROM servicos WHERE id = $1 AND ofertado = TRUE',
+      [servicoId]
     );
+    const servico = resultadoServico.rows[0];
     if (!servico) {
       return res.status(400).json({ mensagem: 'O serviço selecionado não está disponível.' });
     }
@@ -404,7 +472,8 @@ app.put('/atendimentos/:id', (req, res) => {
     salvarRegistros(caminhoArquivoAtendimentos, atendimentos);
     return res.json({ mensagem: 'Atendimento atualizado.', atendimento });
   } catch (erro) {
-    return responderErroDeArquivo(res, erro, 'atendimentos ou serviços');
+    console.error('Não foi possível atualizar o atendimento:', erro.message);
+    return res.status(500).json({ mensagem: 'Não foi possível acessar os dados do atendimento ou do serviço.' });
   }
 });
 
@@ -455,17 +524,23 @@ app.delete('/atendimentos/:id', (req, res) => {
   }
 });
 
-app.get('/servicos', (req, res) => {
+// Lista os serviços cadastrados no PostgreSQL no formato esperado pelo frontend.
+app.get('/servicos', async (req, res) => {
   try {
-    return res.json(lerRegistros(caminhoArquivoServicos, 'serviços'));
+    const resultado = await pool.query(
+      'SELECT id, nome, duracao_minutos AS "duracaoMinutos", valor, ofertado FROM servicos ORDER BY id'
+    );
+    return res.json(resultado.rows.map(normalizarServico));
   } catch (erro) {
-    return responderErroDeArquivo(res, erro, 'serviços');
+    console.error('Não foi possível listar os serviços:', erro.message);
+    return res.status(500).json({ mensagem: 'Não foi possível buscar os serviços.' });
   }
 });
 
-app.post('/servicos', (req, res) => {
+// Cadastra um serviço ofertado após validar nome, duração e valor.
+app.post('/servicos', async (req, res) => {
   const { nome, duracaoMinutos, valor } = req.body || {};
-  const nomeNormalizado = String(nome || '').trim();
+  const nomeNormalizado = typeof nome === 'string' ? nome.trim() : '';
   const duracao = Number(duracaoMinutos);
   const valorNormalizado = Number(valor);
 
@@ -479,92 +554,118 @@ app.post('/servicos', (req, res) => {
   }
 
   try {
-    const servicos = lerRegistros(caminhoArquivoServicos, 'serviços');
-    const novoServico = {
-      id: randomUUID(),
-      nome: nomeNormalizado,
-      duracaoMinutos: duracao,
-      valor: valorEmCentavos / 100,
-      ofertado: true,
-      criadoEm: new Date().toISOString()
-    };
-
-    servicos.push(novoServico);
-    salvarRegistros(caminhoArquivoServicos, servicos);
-    return res.status(201).json({ mensagem: 'Serviço cadastrado com sucesso.', servico: novoServico });
-  } catch (erro) {
-    return responderErroDeArquivo(res, erro, 'serviços');
-  }
-});
-
-app.put('/servicos/:id', (req, res) => {
-  const { nome, duracaoMinutos, valor } = req.body || {};
-  const nomeNormalizado = String(nome || '').trim();
-  const duracao = Number(duracaoMinutos);
-  const valorNormalizado = Number(valor);
-  const valorEmCentavos = Math.round(valorNormalizado * 100);
-
-  if (!nomeNormalizado || !Number.isInteger(duracao) || duracao < 1) {
-    return res.status(400).json({ mensagem: 'Informe o nome do serviço e uma duração em minutos maior que zero.' });
-  }
-  if (!Number.isFinite(valorNormalizado) || !Number.isSafeInteger(valorEmCentavos) || valorEmCentavos <= 0) {
-    return res.status(400).json({ mensagem: 'Informe um valor de oferta maior que zero.' });
-  }
-
-  try {
-    const servicos = lerRegistros(caminhoArquivoServicos, 'serviços');
-    const servico = servicos.find((item) => String(item.id) === req.params.id);
-    if (!servico) {
-      return res.status(404).json({ mensagem: 'Serviço não encontrado.' });
-    }
-
-    Object.assign(servico, {
-      nome: nomeNormalizado,
-      duracaoMinutos: duracao,
-      valor: valorEmCentavos / 100
+    const resultado = await pool.query(
+      `INSERT INTO servicos (nome, duracao_minutos, valor, ofertado)
+       VALUES ($1, $2, $3, TRUE)
+       RETURNING id, nome, duracao_minutos AS "duracaoMinutos", valor, ofertado`,
+      [nomeNormalizado, duracao, valorEmCentavos / 100]
+    );
+    return res.status(201).json({
+      mensagem: 'Serviço cadastrado com sucesso.',
+      servico: normalizarServico(resultado.rows[0])
     });
-    salvarRegistros(caminhoArquivoServicos, servicos);
-    return res.json({ mensagem: 'Serviço atualizado com sucesso.', servico });
   } catch (erro) {
-    return responderErroDeArquivo(res, erro, 'serviços');
+    console.error('Não foi possível cadastrar o serviço:', erro.message);
+    return res.status(500).json({ mensagem: 'Não foi possível cadastrar o serviço.' });
   }
 });
 
-app.delete('/servicos/:id', (req, res) => {
+// Atualiza os dados principais de um serviço sem alterar sua disponibilidade.
+app.put('/servicos/:id', async (req, res) => {
+  const id = validarIdServico(req.params.id);
+  if (id === null) {
+    return res.status(400).json({ mensagem: 'Informe um identificador de serviço válido.' });
+  }
+
+  const { nome, duracaoMinutos, valor } = req.body || {};
+  const nomeNormalizado = typeof nome === 'string' ? nome.trim() : '';
+  const duracao = Number(duracaoMinutos);
+  const valorNormalizado = Number(valor);
+  const valorEmCentavos = Math.round(valorNormalizado * 100);
+
+  if (!nomeNormalizado || !Number.isInteger(duracao) || duracao < 1) {
+    return res.status(400).json({ mensagem: 'Informe o nome do serviço e uma duração em minutos maior que zero.' });
+  }
+  if (!Number.isFinite(valorNormalizado) || !Number.isSafeInteger(valorEmCentavos) || valorEmCentavos <= 0) {
+    return res.status(400).json({ mensagem: 'Informe um valor de oferta maior que zero.' });
+  }
+
   try {
-    const servicos = lerRegistros(caminhoArquivoServicos, 'serviços');
-    const indice = servicos.findIndex((item) => String(item.id) === req.params.id);
-    if (indice === -1) {
+    const resultado = await pool.query(
+      `UPDATE servicos
+       SET nome = $1, duracao_minutos = $2, valor = $3
+       WHERE id = $4
+       RETURNING id, nome, duracao_minutos AS "duracaoMinutos", valor, ofertado`,
+      [nomeNormalizado, duracao, valorEmCentavos / 100, id]
+    );
+    if (resultado.rows.length === 0) {
       return res.status(404).json({ mensagem: 'Serviço não encontrado.' });
     }
 
-    servicos.splice(indice, 1);
-    salvarRegistros(caminhoArquivoServicos, servicos);
+    return res.json({
+      mensagem: 'Serviço atualizado com sucesso.',
+      servico: normalizarServico(resultado.rows[0])
+    });
+  } catch (erro) {
+    console.error('Não foi possível atualizar o serviço:', erro.message);
+    return res.status(500).json({ mensagem: 'Não foi possível atualizar o serviço.' });
+  }
+});
+
+// Exclui um serviço e informa 404 quando o identificador não existe.
+app.delete('/servicos/:id', async (req, res) => {
+  const id = validarIdServico(req.params.id);
+  if (id === null) {
+    return res.status(400).json({ mensagem: 'Informe um identificador de serviço válido.' });
+  }
+
+  try {
+    const resultado = await pool.query(
+      'DELETE FROM servicos WHERE id = $1 RETURNING id',
+      [id]
+    );
+    if (resultado.rows.length === 0) {
+      return res.status(404).json({ mensagem: 'Serviço não encontrado.' });
+    }
+
     return res.json({ mensagem: 'Serviço excluído com sucesso.' });
   } catch (erro) {
-    return responderErroDeArquivo(res, erro, 'serviços');
+    console.error('Não foi possível excluir o serviço:', erro.message);
+    return res.status(500).json({ mensagem: 'Não foi possível excluir o serviço.' });
   }
 });
 
-app.patch('/servicos/:id/oferta', (req, res) => {
+// Altera apenas a disponibilidade do serviço, usada pelo botão de oferta no frontend.
+app.patch('/servicos/:id/oferta', async (req, res) => {
+  const id = validarIdServico(req.params.id);
+  if (id === null) {
+    return res.status(400).json({ mensagem: 'Informe um identificador de serviço válido.' });
+  }
+
   const { ofertado } = req.body || {};
   if (typeof ofertado !== 'boolean') {
     return res.status(400).json({ mensagem: 'Informe se o serviço está sendo ofertado.' });
   }
 
   try {
-    const servicos = lerRegistros(caminhoArquivoServicos, 'serviços');
-    const servico = servicos.find((item) => String(item.id) === req.params.id);
-
-    if (!servico) {
+    const resultado = await pool.query(
+      `UPDATE servicos
+       SET ofertado = $1
+       WHERE id = $2
+       RETURNING id, nome, duracao_minutos AS "duracaoMinutos", valor, ofertado`,
+      [ofertado, id]
+    );
+    if (resultado.rows.length === 0) {
       return res.status(404).json({ mensagem: 'Serviço não encontrado.' });
     }
 
-    servico.ofertado = ofertado;
-    salvarRegistros(caminhoArquivoServicos, servicos);
-    return res.json({ mensagem: 'Disponibilidade do serviço atualizada.', servico });
+    return res.json({
+      mensagem: 'Disponibilidade do serviço atualizada.',
+      servico: normalizarServico(resultado.rows[0])
+    });
   } catch (erro) {
-    return responderErroDeArquivo(res, erro, 'serviços');
+    console.error('Não foi possível atualizar a disponibilidade do serviço:', erro.message);
+    return res.status(500).json({ mensagem: 'Não foi possível atualizar a disponibilidade do serviço.' });
   }
 });
 

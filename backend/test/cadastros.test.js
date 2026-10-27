@@ -3,9 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 import { app } from '../src/routes/server.js';
+import pool from '../src/config/database.js';
 
-const arquivoClientes = new URL('../data/clientes.json', import.meta.url);
-const arquivoServicos = new URL('../data/servicos.json', import.meta.url);
 const arquivoAtendimentos = new URL('../data/atendimentos.json', import.meta.url);
 const arquivoUsuarios = new URL('../data/users.json', import.meta.url);
 const arquivoConfiguracoes = new URL('../data/configuracoes.json', import.meta.url);
@@ -19,23 +18,124 @@ const fetch = (url, opcoes = {}) => globalThis.fetch(url, {
 });
 
 test('cadastra serviços e clientes, e atualiza a oferta do serviço', async () => {
-  const backupClientes = fs.readFileSync(arquivoClientes, 'utf-8');
-  const backupServicos = fs.readFileSync(arquivoServicos, 'utf-8');
   const backupAtendimentos = fs.readFileSync(arquivoAtendimentos, 'utf-8');
   const backupUsuarios = fs.readFileSync(arquivoUsuarios, 'utf-8');
   const backupConfiguracoes = fs.readFileSync(arquivoConfiguracoes, 'utf-8');
-  const quantidadeClientesInicial = JSON.parse(backupClientes).length;
+  const consultaOriginal = pool.query;
+  const servicosBanco = new Map();
+  const clientesBanco = new Map();
+  const usuariosBanco = new Map(JSON.parse(backupUsuarios).map((usuario) => {
+    const registro = {
+      id: usuario.id,
+      nome: usuario.nome,
+      email: usuario.email,
+      senha: usuario.senha,
+      cargo: usuario.cargo ?? usuario.papel,
+      precisaAlterarSenha: usuario.precisaAlterarSenha,
+      podeGerenciarUsuarios: usuario.podeGerenciarUsuarios
+    };
+    return [String(registro.id), registro];
+  }));
+  const primeiroUsuario = usuariosBanco.values().next().value;
+  primeiroUsuario.senha = 'senhaTeste123';
+  let proximoIdServico = 1;
+  let proximoIdCliente = 1;
+  pool.query = async (consulta, parametros = []) => {
+    if (consulta.includes('FROM usuarios') && consulta.includes('WHERE email = $1')) {
+      const email = parametros[0];
+      const usuario = [...usuariosBanco.values()].find((item) => (
+        item.email === email || (consulta.includes('lower(nome)') && item.nome.toLowerCase() === email)
+      ));
+      return { rows: usuario ? [{ ...usuario }] : [] };
+    }
+    if (consulta.startsWith('UPDATE usuarios')) {
+      const usuario = usuariosBanco.get(String(parametros[2]));
+      if (!usuario) return { rows: [] };
+      usuario.senha = parametros[0];
+      usuario.precisaAlterarSenha = parametros[1];
+      return { rows: [{ ...usuario }] };
+    }
+    if (consulta.startsWith('SELECT id, nome, telefone, data_nascimento')) {
+      if (consulta.includes('regexp_replace')) {
+        const cliente = [...clientesBanco.values()].find(
+          (item) => item.telefone.replace(/\D/g, '') === parametros[0]
+        );
+        return { rows: cliente ? [{ ...cliente }] : [] };
+      }
+      if (consulta.includes('WHERE id = $1')) {
+        const cliente = clientesBanco.get(Number(parametros[0]));
+        return { rows: cliente ? [{ ...cliente }] : [] };
+      }
+      return {
+        rows: [...clientesBanco.values()].sort((a, b) => a.id - b.id).map((cliente) => ({ ...cliente }))
+      };
+    }
+    if (consulta.startsWith('INSERT INTO clientes')) {
+      const cliente = {
+        id: proximoIdCliente++,
+        nome: parametros[0],
+        telefone: parametros[1],
+        dataNascimento: parametros[2],
+        cep: parametros[3],
+        dataCadastro: new Date().toISOString()
+      };
+      clientesBanco.set(cliente.id, cliente);
+      return { rows: [{ ...cliente }] };
+    }
+    if (consulta.startsWith('UPDATE clientes')) {
+      const cliente = clientesBanco.get(Number(parametros[4]));
+      if (!cliente) return { rows: [] };
+      [cliente.nome, cliente.telefone] = parametros;
+      cliente.dataNascimento = parametros[2] ?? cliente.dataNascimento;
+      cliente.cep = parametros[3];
+      return { rows: [{ ...cliente }] };
+    }
+    if (consulta.startsWith('DELETE FROM clientes')) {
+      const id = Number(parametros[0]);
+      return { rows: clientesBanco.delete(id) ? [{ id }] : [] };
+    }
+    if (consulta.startsWith('SELECT id, nome, duracao_minutos')) {
+      return { rows: [...servicosBanco.values()].sort((a, b) => a.id - b.id) };
+    }
+    if (consulta.startsWith('INSERT INTO servicos')) {
+      const servico = {
+        id: proximoIdServico++,
+        nome: parametros[0],
+        duracaoMinutos: parametros[1],
+        valor: parametros[2],
+        ofertado: true
+      };
+      servicosBanco.set(servico.id, servico);
+      return { rows: [servico] };
+    }
+    if (consulta.startsWith('SELECT id, nome FROM servicos')) {
+      const servico = servicosBanco.get(Number(parametros[0]));
+      return { rows: servico?.ofertado ? [{ id: servico.id, nome: servico.nome }] : [] };
+    }
+    if (consulta.startsWith('UPDATE servicos')) {
+      const servico = servicosBanco.get(Number(parametros.at(-1)));
+      if (!servico) return { rows: [] };
+      if (consulta.includes('SET ofertado = $1')) {
+        servico.ofertado = parametros[0];
+      } else {
+        [servico.nome, servico.duracaoMinutos, servico.valor] = parametros;
+      }
+      return { rows: [{ ...servico }] };
+    }
+    if (consulta.startsWith('DELETE FROM servicos')) {
+      const id = Number(parametros[0]);
+      return { rows: servicosBanco.delete(id) ? [{ id }] : [] };
+    }
+    throw new Error(`Consulta de teste não reconhecida: ${consulta}`);
+  };
   const servidor = app.listen(0);
   await new Promise((resolve) => servidor.once('listening', resolve));
   const baseUrl = `http://localhost:${servidor.address().port}`;
 
   try {
     fs.writeFileSync(arquivoAtendimentos, '[]');
-    const usuarios = JSON.parse(backupUsuarios);
-    const usuario = usuarios[0];
+    const usuario = primeiroUsuario;
     const senhaTeste = 'senhaTeste123';
-    usuarios[0] = { ...usuario, senha: senhaTeste };
-    fs.writeFileSync(arquivoUsuarios, JSON.stringify(usuarios, null, 2));
     const respostaLogin = await globalThis.fetch(`${baseUrl}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -84,7 +184,11 @@ test('cadastra serviços e clientes, e atualiza a oferta do serviço', async () 
     const { servico } = await respostaServico.json();
     assert.equal(servico.ofertado, true);
     assert.equal(servico.valor, 75.5);
-    assert.ok(servico.criadoEm);
+    assert.ok(servico.id);
+
+    const respostaListaServicos = await fetch(`${baseUrl}/servicos`);
+    assert.equal(respostaListaServicos.status, 200);
+    assert.deepEqual(await respostaListaServicos.json(), [servico]);
 
     const respostaServicoSemValor = await fetch(`${baseUrl}/servicos`, {
       method: 'POST',
@@ -110,7 +214,7 @@ test('cadastra serviços e clientes, e atualiza a oferta do serviço', async () 
 
     const respostaListaClientes = await fetch(`${baseUrl}/clientes`);
     const clientes = await respostaListaClientes.json();
-    assert.equal(clientes.length, quantidadeClientesInicial + 1);
+    assert.equal(clientes.length, 1);
     assert.equal(clienteCriado.telefone, '11912345678');
     assert.equal(clienteCriado.idade, 36);
 
@@ -143,15 +247,14 @@ test('cadastra serviços e clientes, e atualiza a oferta do serviço', async () 
     assert.equal((await respostaEdicaoClienteComNascimento.json()).cliente.idade, 29);
 
     const clienteLegado = {
-      id: 'cliente-legado-teste',
+      id: 999,
       nome: 'Cliente Legado',
       telefone: '11911112222',
-      idade: 42,
+      dataNascimento: '1984-01-01',
+      dataCadastro: new Date().toISOString(),
       cep: '12345678'
     };
-    const clientesComLegado = JSON.parse(fs.readFileSync(arquivoClientes, 'utf-8'));
-    clientesComLegado.push(clienteLegado);
-    fs.writeFileSync(arquivoClientes, JSON.stringify(clientesComLegado, null, 2));
+    clientesBanco.set(clienteLegado.id, clienteLegado);
     const respostaEdicaoLegado = await fetch(`${baseUrl}/clientes/${clienteLegado.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -404,11 +507,9 @@ test('cadastra serviços e clientes, e atualiza a oferta do serviço', async () 
     });
     assert.equal(respostaExclusaoServico.status, 200);
   } finally {
-    fs.writeFileSync(arquivoClientes, backupClientes);
-    fs.writeFileSync(arquivoServicos, backupServicos);
     fs.writeFileSync(arquivoAtendimentos, backupAtendimentos);
-    fs.writeFileSync(arquivoUsuarios, backupUsuarios);
     fs.writeFileSync(arquivoConfiguracoes, backupConfiguracoes);
+    pool.query = consultaOriginal;
     await new Promise((resolve, reject) => {
       servidor.close((erro) => (erro ? reject(erro) : resolve()));
     });

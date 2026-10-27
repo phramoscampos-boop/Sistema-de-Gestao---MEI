@@ -1,10 +1,18 @@
 import { randomBytes } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import {
+  atualizarCargo as atualizarCargoDoUsuario,
+  atualizarEmail as atualizarEmailDoUsuario,
+  atualizarSenha as atualizarSenhaDoUsuario,
+  buscarPorEmail,
+  buscarPorId,
+  buscarPorLogin,
   criarPerfilPublico,
+  criarUsuario as criarRegistroUsuario,
   emailValido,
-  lerUsuarios,
-  salvarUsuarios
+  excluirUsuario as excluirRegistroUsuario,
+  existeProprietaria,
+  listarUsuarios as listarRegistrosUsuarios
 } from '../services/userService.js';
 const nomeCookieSessao = 'mei_session';
 const duracaoSessaoMs = 60 * 60 * 1000;
@@ -98,20 +106,23 @@ export async function fazerLogin(req, res) {
   }
 
   try {
-    const usuarios = lerUsuarios();
     const emailDigitado = email.trim().toLowerCase();
-    const indiceUsuario = usuarios.findIndex((usuario) => (
-      usuario.email === emailDigitado || String(usuario.nome).toLowerCase() === emailDigitado
-    ));
-    const usuario = usuarios[indiceUsuario];
+    const usuario = await buscarPorLogin(emailDigitado);
 
-    if (!usuario || !usuario.ativo || !(await validarSenha(usuario.senha, senha))) {
+    if (!usuario || !(await validarSenha(usuario.senha, senha))) {
       return res.status(401).json({ mensagem: 'E-mail ou senha incorretos.' });
     }
 
     if (!senhaJaFoiHashada(usuario.senha)) {
       usuario.senha = await bcrypt.hash(senha, 10);
-      salvarUsuarios(usuarios);
+      const usuarioAtualizado = await atualizarSenhaDoUsuario(
+        usuario.id,
+        usuario.senha,
+        usuario.precisaAlterarSenha
+      );
+      if (!usuarioAtualizado) {
+        return res.status(401).json({ mensagem: 'E-mail ou senha incorretos.' });
+      }
     }
 
     const token = randomBytes(32).toString('hex');
@@ -155,22 +166,21 @@ export async function alterarSenha(req, res) {
   }
 
   try {
-    const usuarios = lerUsuarios();
     const emailDigitado = String(email).trim().toLowerCase();
-    const indiceUsuario = usuarios.findIndex((usuario) => usuario.email === emailDigitado);
-    const usuario = usuarios[indiceUsuario];
+    const usuario = await buscarPorEmail(emailDigitado);
 
     if (!usuario || !(await validarSenha(usuario.senha, String(senhaAtual)))) {
       return res.status(401).json({ mensagem: 'E-mail ou senha atual incorretos.' });
     }
 
     const senhaHash = await bcrypt.hash(String(novaSenha), 10);
-    usuario.senha = senhaHash;
-    usuario.precisaAlterarSenha = false;
-    salvarUsuarios(usuarios);
+    const usuarioAtualizado = await atualizarSenhaDoUsuario(usuario.id, senhaHash, false);
+    if (!usuarioAtualizado) {
+      return res.status(404).json({ mensagem: 'Usuário não encontrado.' });
+    }
     for (const sessao of sessoes.values()) {
-      if (String(sessao.usuario.id) === String(usuario.id)) {
-        sessao.usuario = criarPerfilPublico(usuario);
+      if (String(sessao.usuario.id) === String(usuarioAtualizado.id)) {
+        sessao.usuario = criarPerfilPublico(usuarioAtualizado);
       }
     }
     const sessaoAtual = obterSessao(req);
@@ -195,20 +205,15 @@ export async function alterarEmail(req, res) {
   }
 
   try {
-    const usuarios = lerUsuarios();
-    const usuario = usuarios.find(
-      (item) => String(item.id) === String(req.usuarioAutenticado.id)
-    );
-    if (!usuario || !usuario.ativo || !(await validarSenha(usuario.senha, senhaAtual))) {
+    const usuario = await buscarPorId(req.usuarioAutenticado.id);
+    if (!usuario || !(await validarSenha(usuario.senha, senhaAtual))) {
       return res.status(401).json({ mensagem: 'Sua senha atual está incorreta.' });
     }
-    if (usuarios.some((item) => String(item.id) !== String(usuario.id) && item.email === novoEmail)) {
-      return res.status(409).json({ mensagem: 'Já existe uma conta com esse e-mail.' });
-    }
 
-    usuario.email = novoEmail;
-    salvarUsuarios(usuarios);
-    const usuarioPublico = criarPerfilPublico(usuario);
+    const usuarioPublico = await atualizarEmailDoUsuario(usuario.id, novoEmail);
+    if (!usuarioPublico) {
+      return res.status(404).json({ mensagem: 'Usuário não encontrado.' });
+    }
     for (const sessao of sessoes.values()) {
       if (String(sessao.usuario.id) === String(usuario.id)) {
         sessao.usuario = usuarioPublico;
@@ -216,6 +221,9 @@ export async function alterarEmail(req, res) {
     }
     return res.json({ mensagem: 'E-mail alterado com sucesso.', usuario: usuarioPublico });
   } catch (erro) {
+    if (erro.code === 'EMAIL_DUPLICADO') {
+      return res.status(409).json({ mensagem: 'Já existe uma conta com esse e-mail.' });
+    }
     return responderErro(res, 'Não foi possível alterar o e-mail', erro);
   }
 }
@@ -227,9 +235,9 @@ export function exigirGestaoUsuarios(req, res, next) {
   return next();
 }
 
-export function listarUsuarios(req, res) {
+export async function listarUsuarios(req, res) {
   try {
-    return res.json(lerUsuarios().map(criarPerfilPublico));
+    return res.json(await listarRegistrosUsuarios());
   } catch (erro) {
     return responderErro(res, 'Não foi possível carregar os usuários', erro);
   }
@@ -245,52 +253,42 @@ export async function cadastrarUsuario(req, res) {
   }
 
   try {
-    const usuarios = lerUsuarios();
-    if (usuarios.some((usuario) => usuario.email === email)) {
-      return res.status(409).json({ mensagem: 'Já existe uma conta com esse e-mail.' });
-    }
-
-    const usuario = {
-      id: randomBytes(16).toString('hex'),
+    const usuario = await criarRegistroUsuario({
       nome,
       email,
       senha: await bcrypt.hash('12345', 10),
-      papel,
-      podeGerenciarUsuarios: false,
+      cargo: papel,
       precisaAlterarSenha: true,
-      ativo: true,
-      criadoEm: new Date().toISOString()
-    };
-    usuarios.push(usuario);
-    salvarUsuarios(usuarios);
+      podeGerenciarUsuarios: false
+    });
     return res.status(201).json({
       mensagem: 'Usuário cadastrado com a senha padrão. A troca será exigida no primeiro acesso.',
       usuario: criarPerfilPublico(usuario),
       senhaTemporaria: '12345'
     });
   } catch (erro) {
+    if (erro.code === 'EMAIL_DUPLICADO') {
+      return res.status(409).json({ mensagem: 'Já existe uma conta com esse e-mail.' });
+    }
     return responderErro(res, 'Não foi possível cadastrar o usuário', erro);
   }
 }
 
-export function alterarPapelUsuario(req, res) {
+export async function alterarPapelUsuario(req, res) {
   const { papel } = req.body || {};
   if (!['usuario', 'administrador'].includes(papel)) {
     return res.status(400).json({ mensagem: 'Selecione um cargo válido.' });
   }
 
   try {
-    const usuarios = lerUsuarios();
-    const usuario = usuarios.find((item) => String(item.id) === req.params.id);
+    const usuarioExistente = await buscarPorId(req.params.id);
+    const usuario = usuarioExistente && await atualizarCargoDoUsuario(req.params.id, papel);
     if (!usuario) {
-      return res.status(404).json({ mensagem: 'Usuário não encontrado.' });
-    }
-    if (usuario.podeGerenciarUsuarios) {
-      return res.status(403).json({ mensagem: 'O cargo das contas privilegiadas não pode ser alterado.' });
+      return usuarioExistente
+        ? res.status(403).json({ mensagem: 'O cargo das contas privilegiadas não pode ser alterado.' })
+        : res.status(404).json({ mensagem: 'Usuário não encontrado.' });
     }
 
-    usuario.papel = papel;
-    salvarUsuarios(usuarios);
     for (const sessao of sessoes.values()) {
       if (String(sessao.usuario.id) === String(usuario.id)) {
         sessao.usuario = criarPerfilPublico(usuario);
@@ -304,23 +302,27 @@ export function alterarPapelUsuario(req, res) {
 
 export async function resetarSenhaUsuario(req, res) {
   try {
-    const usuarios = lerUsuarios();
-    const usuario = usuarios.find((item) => String(item.id) === req.params.id);
+    const usuario = await buscarPorId(req.params.id);
     if (!usuario) {
       return res.status(404).json({ mensagem: 'Usuário não encontrado.' });
     }
 
-    usuario.senha = await bcrypt.hash('12345', 10);
-    usuario.precisaAlterarSenha = true;
-    salvarUsuarios(usuarios);
+    const usuarioAtualizado = await atualizarSenhaDoUsuario(
+      usuario.id,
+      await bcrypt.hash('12345', 10),
+      true
+    );
+    if (!usuarioAtualizado) {
+      return res.status(404).json({ mensagem: 'Usuário não encontrado.' });
+    }
     for (const sessao of sessoes.values()) {
-      if (String(sessao.usuario.id) === String(usuario.id)) {
-        sessao.usuario = criarPerfilPublico(usuario);
+      if (String(sessao.usuario.id) === String(usuarioAtualizado.id)) {
+        sessao.usuario = criarPerfilPublico(usuarioAtualizado);
       }
     }
     return res.json({
-      mensagem: `Senha de ${usuario.nome} redefinida para 12345. A troca será exigida no próximo acesso.`,
-      usuario: criarPerfilPublico(usuario),
+      mensagem: `Senha de ${usuarioAtualizado.nome} redefinida para 12345. A troca será exigida no próximo acesso.`,
+      usuario: criarPerfilPublico(usuarioAtualizado),
       redirecionarParaTroca: String(usuario.id) === String(req.usuarioAutenticado.id)
     });
   } catch (erro) {
@@ -328,21 +330,21 @@ export async function resetarSenhaUsuario(req, res) {
   }
 }
 
-export function excluirUsuario(req, res) {
+export async function excluirUsuario(req, res) {
   try {
-    const usuarios = lerUsuarios();
-    const indice = usuarios.findIndex((item) => String(item.id) === req.params.id);
-    if (indice === -1) {
+    const usuario = await buscarPorId(req.params.id);
+    if (!usuario) {
       return res.status(404).json({ mensagem: 'Usuário não encontrado.' });
     }
-    const usuario = usuarios[indice];
     if (usuario.podeGerenciarUsuarios ||
         String(usuario.id) === String(req.usuarioAutenticado.id)) {
       return res.status(403).json({ mensagem: 'As contas privilegiadas não podem ser removidas.' });
     }
 
-    usuarios.splice(indice, 1);
-    salvarUsuarios(usuarios);
+    const excluido = await excluirRegistroUsuario(usuario.id);
+    if (!excluido) {
+      return res.status(403).json({ mensagem: 'As contas privilegiadas não podem ser removidas.' });
+    }
     for (const [token, sessao] of sessoes) {
       if (String(sessao.usuario.id) === String(usuario.id)) sessoes.delete(token);
     }
@@ -359,26 +361,16 @@ export async function criarProprietariaInicial(nome, email) {
     throw new Error('Informe um nome e um e-mail válidos para a proprietária.');
   }
 
-  const usuarios = lerUsuarios({ migrarLegados: true });
-  if (usuarios.some((usuario) => usuario.papel === 'proprietaria')) {
+  if (await existeProprietaria()) {
     throw new Error('Já existe uma conta proprietária.');
   }
-  if (usuarios.some((usuario) => usuario.email === emailNormalizado)) {
-    throw new Error('Já existe uma conta com esse e-mail.');
-  }
-
-  const usuario = {
-    id: randomBytes(16).toString('hex'),
+  const usuario = await criarRegistroUsuario({
     nome: nomeNormalizado,
     email: emailNormalizado,
     senha: await bcrypt.hash('12345', 10),
-    papel: 'proprietaria',
+    cargo: 'proprietaria',
     podeGerenciarUsuarios: true,
     precisaAlterarSenha: true,
-    ativo: true,
-    criadoEm: new Date().toISOString()
-  };
-  usuarios.push(usuario);
-  salvarUsuarios(usuarios);
+  });
   return { usuario: criarPerfilPublico(usuario), senhaTemporaria: '12345' };
 }

@@ -24,6 +24,7 @@
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "express": "^5.2.1",
-    "fs": "^0.0.1-security"
+    "fs": "^0.0.1-security",
+    "pg": "^8.23.1"
   }
 }

@@ -6,7 +6,7 @@ Aplicação web para cadastro de clientes, gestão de serviços e organização 
 
 ```text
 backend/
-  data/                       # Coleções JSON persistidas pelo servidor
+  data/                       # Dados JSON ainda usados por atendimentos e configurações
   src/
     controllers/
       authController.js       # Autenticação, sessões e gestão de contas
@@ -16,7 +16,12 @@ backend/
     scripts/
       create-owner.js         # Provisionamento local da conta proprietária
     services/
-      userService.js          # Leitura, normalização e persistência de usuários
+      userService.js          # Consultas, normalização e persistência de usuários no PostgreSQL
+    config/
+      database.js             # Pool PostgreSQL configurado por variáveis de ambiente
+  migrar-clientes.js          # Importa clientes do JSON (executar uma vez)
+  migrar-servicos.js          # Importa serviços do JSON (executar uma vez)
+  migrar-usuarios.js          # Importa usuários do JSON (executar uma vez)
   test/                       # Testes sequenciais de API e autenticação
 frontend/
   assets/images/              # Marca, ícones e imagens
@@ -36,13 +41,25 @@ npm install
 npm start
 ```
 
+A aplicação usa PostgreSQL para usuários, clientes e serviços; atendimentos e configurações ainda usam os arquivos JSON em `backend/data/`. Configure o acesso ao banco antes de iniciar. É possível fornecer `DATABASE_URL` ou configurar as variáveis `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER` e `PGPASSWORD`. Na configuração local, o padrão é `localhost:5432`, banco `gestao-mei` e usuário `postgres`; a senha deve ser fornecida por `PGPASSWORD`.
+
+Para migrar os registros JSON existentes, execute cada comando **uma única vez** a partir de `backend/`, após criar as tabelas correspondentes:
+
+```sh
+node migrar-clientes.js
+node migrar-servicos.js
+node migrar-usuarios.js
+```
+
+O importador de usuários também cria a coluna `pode_gerenciar_usuarios` se ela ainda não existir. Preserve uma cópia dos arquivos JSON até confirmar a migração. Não execute os importadores novamente sobre os mesmos dados, pois eles podem criar registros duplicados.
+
 A aplicação fica disponível em `http://localhost:3000`. Para executar os testes:
 
 ```sh
 npm test
 ```
 
-Os testes são sequenciais porque usam temporariamente as coleções JSON compartilhadas e restauram os arquivos ao terminar.
+Os testes são sequenciais porque usam coleções JSON de atendimentos/configuração e simulam as consultas PostgreSQL com dados em memória.
 
 Na primeira instalação, crie a conta proprietária localmente com:
 
@@ -56,11 +73,11 @@ O comando cria a conta com a senha inicial `12345` e exige a troca no primeiro a
 
 O `bcryptjs` implementa o algoritmo bcrypt. `bcrypt.hash(senha, 10)` gera um salt aleatório e um hash de custo 10; o salt e o custo ficam incorporados no resultado. A senha original não pode ser recuperada do hash. Para autenticar, `bcrypt.compare(senhaInformada, hashArmazenado)` recalcula e compara o valor com segurança.
 
-Senhas antigas em texto simples continuam aceitas apenas para permitir a migração gradual: após o próximo login válido, o servidor as substitui por um hash bcrypt no arquivo de usuários. Novas alterações de senha já são persistidas somente como hash.
+Senhas antigas em texto simples continuam aceitas apenas para permitir a migração gradual: após o próximo login válido, o servidor as substitui por um hash bcrypt no PostgreSQL. Novas alterações de senha já são persistidas somente como hash.
 
 O servidor mantém a sessão em memória e entrega ao navegador um cookie `HttpOnly` e `SameSite=Strict`, que não pode ser lido por JavaScript. As rotas de dados e a página da dashboard exigem esse cookie. A atividade reinicia o prazo deslizante de uma hora; sem atividade, a interface encerra a sessão e o servidor rejeita acessos posteriores. Reiniciar o servidor encerra as sessões existentes.
 
-O comando inicial migra as contas antigas sem cargo como administradores privilegiados. A proprietária e essas contas podem cadastrar usuários, promover ou rebaixar contas comuns e excluí-las; contas privilegiadas não podem ser excluídas pelo painel. Administradores e usuários criados depois não recebem automaticamente permissão para gerenciar contas. Novas contas usam a senha padrão `12345`, exigem troca no primeiro acesso e não podem acessar os dados antes dessa troca.
+Na migração para o banco, o cargo e a permissão `podeGerenciarUsuarios` existentes são preservados. A proprietária e as contas com essa permissão podem cadastrar usuários, promover ou rebaixar contas comuns e excluí-las; contas privilegiadas não podem ser excluídas pelo painel. Administradores e usuários criados depois não recebem automaticamente permissão para gerenciar contas. Novas contas usam a senha padrão `12345`, exigem troca no primeiro acesso e não podem acessar os dados antes dessa troca.
 
 O perfil indica se a conta é Proprietária, Administrador privilegiado, Administrador ou Usuário. Novas contas começam com a senha `12345`; contas privilegiadas podem redefinir a senha de qualquer conta (inclusive outra conta privilegiada), retornando a `12345` e exigindo troca no próximo acesso. Essa senha padrão é fraca e deve ser substituída imediatamente. Cada usuário pode alterar o próprio e-mail no menu de perfil, confirmando a senha atual; endereços já usados por outra conta não são aceitos.
 
@@ -81,9 +98,9 @@ Na configuração, cada turno tem campos de início e fim agrupados em um painel
 ### Backend
 
 - `backend/src/routes/server.js` resolve os caminhos dos dados e do frontend em relação à raiz do backend, inicia o Express e registra as rotas.
-- `backend/src/services/userService.js` normaliza contas antigas, persiste usuários e remove credenciais do perfil retornado à interface.
+- `backend/src/services/userService.js` consulta usuários no PostgreSQL e remove credenciais do perfil retornado à interface.
 - `backend/src/controllers/settingsController.js` valida e persiste as faixas dos turnos em `backend/data/configuracoes.json`.
-- `lerRegistros` e `salvarRegistros` leem e persistem cada coleção JSON; arquivos inválidos geram erro explícito.
+- `lerRegistros` e `salvarRegistros` leem e persistem as coleções JSON que ainda não migraram; arquivos inválidos geram erro explícito.
 - `validarNomeCliente`, `validarTelefoneCliente`, `validarIdade` e `validarCep` normalizam e validam os dados antes de gravá-los.
 - `calcularIdade` valida a data de nascimento no formato ISO com ano de quatro dígitos e calcula a idade. `validarDataAtendimento` rejeita datas e horários inválidos ou passados.
 - As rotas `/clientes` mantêm os dados pessoais sem serviço associado; `/servicos` gerencia catálogo e disponibilidade; `/atendimentos` seleciona um serviço e verifica conflitos de horário.
