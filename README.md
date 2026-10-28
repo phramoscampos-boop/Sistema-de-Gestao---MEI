@@ -43,6 +43,15 @@ npm start
 
 A aplicação usa PostgreSQL para usuários, clientes e serviços; atendimentos e configurações ainda usam os arquivos JSON em `backend/data/`. Configure o acesso ao banco antes de iniciar. É possível fornecer `DATABASE_URL` ou configurar as variáveis `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER` e `PGPASSWORD`. Na configuração local, o padrão é `localhost:5432`, banco `gestao-mei` e usuário `postgres`; a senha deve ser fornecida por `PGPASSWORD`.
 
+No PowerShell do Windows, configure as variáveis na mesma janela antes de executar os comandos:
+
+```powershell
+$env:PGPASSWORD = 'sua_senha_do_postgres'
+npm start
+```
+
+Outra opção é usar uma URL completa: `$env:DATABASE_URL = 'postgresql://postgres:sua_senha@localhost:5432/gestao-mei'`. Se a senha tiver caracteres especiais, codifique-a como URL ou prefira configurar `PGPASSWORD`. O servidor informa claramente quando `PGPASSWORD` ou `DATABASE_URL` não está configurado e não inicia sem validar a conexão PostgreSQL.
+
 Para migrar os registros JSON existentes, execute cada comando **uma única vez** a partir de `backend/`, após criar as tabelas correspondentes:
 
 ```sh

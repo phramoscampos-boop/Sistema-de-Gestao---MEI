@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
-import pool from '../config/database.js';
+import pool, { validarConfiguracaoBanco } from '../config/database.js';
 import {
   alterarSenha,
   alterarPapelUsuario,
@@ -679,9 +679,18 @@ app.use((erro, req, res, next) => {
 });
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
-  app.listen(3000, () => {
-    console.log('Servidor rodando em http://localhost:3000');
-  });
+  (async () => {
+    try {
+      validarConfiguracaoBanco();
+      await pool.query('SELECT 1');
+      app.listen(3000, () => {
+        console.log('Servidor rodando em http://localhost:3000');
+      });
+    } catch (erro) {
+      console.error('Não foi possível iniciar o servidor:', erro.message);
+      process.exitCode = 1;
+    }
+  })();
 }
 
 export { app };
