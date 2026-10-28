@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
+import 'dotenv/config';
 import pool, { validarConfiguracaoBanco } from '../config/database.js';
 import {
   alterarSenha,
